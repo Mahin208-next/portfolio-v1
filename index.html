@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M. Hasan — Creative Technologist &amp; Senior Frontend Engineer</title>
+    <meta name="description" content="High-end typographic portfolio of M. Hasan featuring kinetic typography, editorial design, full-stack projects, and interactive case studies." />
+    <meta property="og:title" content="M. Hasan — Creative Technologist &amp; Senior Frontend Engineer" />
+    <meta property="og:description" content="High-end typographic portfolio of M. Hasan featuring kinetic typography, editorial design, full-stack projects, and interactive case studies." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Make window.fetch writable to prevent extension interceptors from crashing on getter-only property
+      try {
+        let _fetch = window.fetch ? window.fetch.bind(window) : undefined;
+        Object.defineProperty(window, 'fetch', {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return _fetch;
+          },
+          set(fn) {
+            _fetch = fn;
+          },
+        });
+      } catch (e) {
+        // Safe fallback
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
