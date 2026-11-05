@@ -12,15 +12,19 @@ export const Footer: React.FC = () => {
   return (
     <footer className="py-12 bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-t border-zinc-200 dark:border-zinc-800 transition-colors">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
-        {/* Brand & Colophon: M. Hasan (M is yellow) */}
+        {/* Brand & Colophon */}
         <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
           <span className="font-bold text-zinc-900 dark:text-white tracking-tight font-mono text-base">
-            <span className="text-yellow-400 font-extrabold">M</span>
-            <span>. Hasan</span>
+            <span className="text-yellow-400 font-extrabold">
+              {(data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan').charAt(0)}
+            </span>
+            <span>
+              {(data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan').slice(1)}
+            </span>
           </span>
           <span aria-hidden="true" className="text-zinc-400">·</span>
           <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
-            Creative Technologist &amp; Senior Frontend Engineer
+            {data.personalInfo.title}
           </span>
         </div>
 

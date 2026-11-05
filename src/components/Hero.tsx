@@ -55,6 +55,7 @@ export const Hero: React.FC = () => {
 
   return (
     <section
+      id="home"
       ref={containerRef}
       className="relative pt-28 pb-16 lg:pt-36 lg:pb-20 overflow-hidden border-b border-zinc-200 dark:border-zinc-800"
     >

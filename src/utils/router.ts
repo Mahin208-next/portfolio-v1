@@ -35,6 +35,11 @@ export function getCleanPath(): string {
     return '/admin';
   }
 
+  if (path === '/home') {
+    window.history.replaceState({}, '', '/');
+    return '/';
+  }
+
   return path;
 }
 
@@ -47,6 +52,9 @@ export function navigateTo(path: string) {
     clean = '/' + clean;
   }
   clean = clean.toLowerCase().replace(/\/+$/, '') || '/';
+  if (clean === '/home') {
+    clean = '/';
+  }
 
   window.history.pushState({}, '', clean);
   window.dispatchEvent(new Event('popstate'));
