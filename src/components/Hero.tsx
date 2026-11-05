@@ -71,9 +71,9 @@ export const Hero: React.FC = () => {
                   className="text-3xl sm:text-5xl md:text-6xl xl:text-7xl font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase leading-[0.95]"
                   style={{ textWrap: 'balance' }}
                 >
-                  Creative
+                  {personalInfo.heroHeadlineLine1 || 'Creative'}
                   <span className="block text-zinc-500 dark:text-zinc-400 font-serif-editorial italic font-normal tracking-normal lowercase text-2xl sm:text-4xl md:text-5xl xl:text-6xl pl-1 sm:pl-2">
-                    technologist
+                    {personalInfo.heroHeadlineAccent || 'technologist'}
                   </span>
                 </h1>
               </div>
@@ -84,7 +84,7 @@ export const Hero: React.FC = () => {
                   className="text-2xl sm:text-4xl md:text-5xl xl:text-6xl font-bold tracking-tight text-yellow-500 dark:text-yellow-400 uppercase leading-[1.05]"
                   style={{ textWrap: 'balance' }}
                 >
-                  &amp; Senior Frontend Engineer
+                  {personalInfo.heroHeadlineLine2 || '& Senior Frontend Engineer'}
                 </h2>
               </div>
 

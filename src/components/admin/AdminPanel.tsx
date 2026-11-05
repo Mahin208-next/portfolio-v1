@@ -16,6 +16,7 @@ import {
   Check,
   ExternalLink,
   Image as ImageIcon,
+  Upload,
 } from 'lucide-react';
 import { usePortfolio, TechSkillItem, PillarItem } from '../../context/PortfolioContext';
 import { AVAILABLE_ICON_NAMES, renderSkillIcon } from '../../utils/skillIcons';
@@ -63,6 +64,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const triggerToast = () => {
     setSaveToast(true);
     setTimeout(() => setSaveToast(false), 2200);
+  };
+
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    callback: (base64Url: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (typeof event.target?.result === 'string') {
+          callback(event.target.result);
+          triggerToast();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   // Preset portrait options for quick selection
@@ -245,6 +263,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         }}
                         className="w-full px-4 py-2.5 text-sm font-mono bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
+                        Or Upload Image from Computer
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-amber-400 transition-colors bg-zinc-50 dark:bg-zinc-950 text-xs font-mono text-zinc-500 hover:text-amber-500 w-fit">
+                        <Upload size={14} />
+                        <span>Choose Portrait File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleFileUpload(e, (base64Url) => updatePersonalInfo({ heroPortrait: base64Url }))}
+                        />
+                      </label>
                     </div>
 
                     <div>

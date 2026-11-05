@@ -3,19 +3,39 @@ import { scrollToElement, scrollToTop } from './smoothScroll';
 
 export function getCleanPath(): string {
   if (typeof window === 'undefined') return '/';
-  
-  // Clean hash like /#skills or #skills if present
+
+  // Check query parameter search, e.g. ?admin or ?q=/admin
+  if (window.location.search) {
+    const searchLower = window.location.search.toLowerCase();
+    if (searchLower.includes('admin')) {
+      window.history.replaceState({}, '', '/admin');
+      return '/admin';
+    }
+  }
+
+  // Clean hash like /#skills or #skills or /#admin or #admin
   if (window.location.hash) {
-    const rawHash = window.location.hash.replace(/^#\/?/, '');
+    const rawHash = window.location.hash.replace(/^#\/?/, '').replace(/\/+$/, '').toLowerCase();
+    if (rawHash === 'admin' || rawHash.startsWith('admin')) {
+      window.history.replaceState({}, '', '/admin');
+      return '/admin';
+    }
     if (rawHash) {
-      const cleanPath = '/' + rawHash.toLowerCase();
+      const cleanPath = '/' + rawHash;
       window.history.replaceState({}, '', cleanPath);
       return cleanPath;
     }
   }
 
-  const path = window.location.pathname.toLowerCase();
-  return path || '/';
+  // Remove trailing slashes and normalize
+  const rawPath = window.location.pathname.toLowerCase().replace(/\/+$/, '');
+  const path = rawPath || '/';
+  
+  if (path === '/admin' || path.startsWith('/admin')) {
+    return '/admin';
+  }
+
+  return path;
 }
 
 export function navigateTo(path: string) {
@@ -26,10 +46,15 @@ export function navigateTo(path: string) {
   if (!clean.startsWith('/')) {
     clean = '/' + clean;
   }
-  clean = clean.toLowerCase();
+  clean = clean.toLowerCase().replace(/\/+$/, '') || '/';
 
   window.history.pushState({}, '', clean);
   window.dispatchEvent(new Event('popstate'));
+
+  if (clean === '/admin') {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return;
+  }
 
   // If path corresponds to home or root
   if (clean === '/' || clean === '/home') {

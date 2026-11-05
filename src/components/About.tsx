@@ -22,7 +22,7 @@ export const About: React.FC = () => {
               <span>About Me</span>
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white uppercase">
-              This is Mossadik Hasan
+              {personalInfo.aboutHeading || 'This is Mossadik Hasan'}
             </h2>
           </div>
 
