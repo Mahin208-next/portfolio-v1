@@ -1,8 +1,8 @@
 // POST /api/auth/setup — Initial admin password setup (only works if no password exists yet)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../_lib/db';
-import { signToken, setCookieHeader } from '../_lib/auth';
+import { supabase } from '../_lib/db.ts';
+import { signToken, setCookieHeader } from '../_lib/auth.ts';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

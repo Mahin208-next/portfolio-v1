@@ -1,8 +1,8 @@
 // GET /api/portfolio — fetch all portfolio data (public)
 // PUT /api/portfolio — update portfolio data (admin only)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../_lib/db';
-import { requireAuth } from '../_lib/auth';
+import { supabase } from '../_lib/db.ts';
+import { requireAuth } from '../_lib/auth.ts';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Allow CORS for the frontend

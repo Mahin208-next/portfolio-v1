@@ -1,8 +1,8 @@
 // POST /api/auth/change-password
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../_lib/db';
-import { requireAuth } from '../_lib/auth';
+import { supabase } from '../_lib/db.ts';
+import { requireAuth } from '../_lib/auth.ts';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

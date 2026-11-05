@@ -1,8 +1,8 @@
 // POST /api/auth/login
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../_lib/db';
-import { signToken, setCookieHeader } from '../_lib/auth';
+import { supabase } from '../_lib/db.ts';
+import { signToken, setCookieHeader } from '../_lib/auth.ts';
 
 // Simple in-memory rate limit (per serverless instance)
 const attempts: Map<string, { count: number; firstAt: number }> = new Map();
@@ -36,9 +36,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     .eq('id', 'admin')
     .single();
 
+  // If no admin record exists yet, allow initial setup with master password or seed it
   if (error || !data) {
-    // No admin configured yet
-    return res.status(401).json({ error: 'Admin not configured. Please set up first.', needsSetup: true });
+    if (password === 'Mossadik@2026') {
+      const hash = await bcrypt.hash('Mossadik@2026', 12);
+      await supabase.from('admin_credentials').insert({ id: 'admin', password_hash: hash });
+      const token = signToken({ id: 'admin' });
+      res.setHeader('Set-Cookie', setCookieHeader(token));
+      return res.status(200).json({ success: true });
+    }
+    return res.status(401).json({
+      error: 'Invalid password. Use initial password: Mossadik@2026 or click Set up below.',
+      needsSetup: true,
+    });
   }
 
   const valid = await bcrypt.compare(password, data.password_hash);
