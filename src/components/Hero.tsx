@@ -120,21 +120,21 @@ export const Hero: React.FC = () => {
             </div>
 
             {/* Horizontal Docked Social Links Stick in Hero */}
-            <div className="mt-8 pt-5 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-4 sm:gap-5 text-xs font-mono overflow-x-auto no-scrollbar">
-              <span className="text-zinc-400 dark:text-zinc-500 uppercase tracking-widest text-[10px] shrink-0">
+            <div className="mt-7 sm:mt-8 pt-4 sm:pt-5 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-5">
+              <span className="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-xs sm:text-[10px] font-mono font-semibold shrink-0">
                 Connect:
               </span>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-4 w-full sm:w-auto">
                 {personalInfo.socials.map((social, idx) => (
                   <a
                     key={`${social.name}-${idx}`}
                     href={getSocialHref(social)}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-zinc-700 dark:text-zinc-300 hover:text-yellow-500 dark:hover:text-yellow-400 font-medium inline-flex items-center gap-1 transition-colors whitespace-nowrap"
+                    className="text-xs font-mono font-medium px-3 py-1.5 sm:p-0 rounded-lg sm:rounded-none bg-zinc-100/90 dark:bg-zinc-900/90 sm:bg-transparent dark:sm:bg-transparent border border-zinc-200 dark:border-zinc-800 sm:border-0 text-zinc-800 dark:text-zinc-200 hover:text-yellow-500 dark:hover:text-yellow-400 hover:border-yellow-400 inline-flex items-center gap-1.5 transition-all whitespace-nowrap"
                   >
                     <span>{getSocialDisplayName(social)}</span>
-                    <ArrowUpRight size={12} className="opacity-70" />
+                    <ArrowUpRight size={13} className="opacity-70" />
                   </a>
                 ))}
               </div>
@@ -142,10 +142,10 @@ export const Hero: React.FC = () => {
           </div>
 
           {/* Right Column: Editorial Visual Container */}
-          <div className="lg:col-span-5 flex flex-col justify-center">
+          <div className="lg:col-span-5 flex flex-col justify-center items-center lg:items-stretch pt-6 lg:pt-0">
             <div
               ref={imageFrameRef}
-              className="relative group rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 shadow-xl"
+              className="relative group rounded-2xl lg:rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900/50 shadow-xl w-full max-w-[280px] sm:max-w-[340px] lg:max-w-none mx-auto"
             >
               <div className="aspect-[4/5] sm:aspect-[4/4] lg:aspect-[4/5] w-full overflow-hidden">
                 <img
