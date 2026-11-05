@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { navigateTo } from '../utils/router';
+import { getSocialDisplayName, getSocialHref } from '../utils/socialHelpers';
 
 export const Hero: React.FC = () => {
   const { data } = usePortfolio();
@@ -124,15 +125,15 @@ export const Hero: React.FC = () => {
                 Connect:
               </span>
               <div className="flex items-center gap-4">
-                {personalInfo.socials.map((social) => (
+                {personalInfo.socials.map((social, idx) => (
                   <a
-                    key={social.name}
-                    href={social.url}
+                    key={`${social.name}-${idx}`}
+                    href={getSocialHref(social)}
                     target="_blank"
                     rel="noreferrer"
                     className="text-zinc-700 dark:text-zinc-300 hover:text-yellow-500 dark:hover:text-yellow-400 font-medium inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                   >
-                    <span>{social.name}</span>
+                    <span>{getSocialDisplayName(social)}</span>
                     <ArrowUpRight size={12} className="opacity-70" />
                   </a>
                 ))}

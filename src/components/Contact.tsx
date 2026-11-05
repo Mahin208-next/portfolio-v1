@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Check, Send, Clock, ArrowUpRight } from 'lucide-react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { SectionReveal } from './common/SectionReveal';
+import { getSocialDisplayName, getSocialHref } from '../utils/socialHelpers';
 
 export const Contact: React.FC = () => {
   const { data } = usePortfolio();
@@ -139,15 +140,15 @@ export const Contact: React.FC = () => {
                   Digital Presence
                 </span>
                 <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
-                  {personalInfo.socials.map((s) => (
+                  {personalInfo.socials.map((s, idx) => (
                     <a
-                      key={s.name}
-                      href={s.url}
+                      key={`${s.name}-${idx}`}
+                      href={getSocialHref(s)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-zinc-700 dark:text-zinc-300 hover:text-yellow-500 dark:hover:text-yellow-400 flex items-center gap-1 transition-colors"
                     >
-                      <span>{s.name}</span>
+                      <span>{getSocialDisplayName(s)}</span>
                       <ArrowUpRight size={13} />
                     </a>
                   ))}

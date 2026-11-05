@@ -944,81 +944,134 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           {/* ════ 11. SOCIAL MEDIA LINKS ════ */}
           {activeSection === 'socials' && (
             <div className="space-y-6">
-              <SectionCard title="Social & Professional Profiles" description="Links displayed in the hero section and footer colophon.">
-                <div className="space-y-2.5">
+              <SectionCard
+                title="Social & Professional Profiles"
+                description="Manage your social profile links. Enter the display name (e.g. GitHub, Facebook) and the full profile link. The site name will be shown on the public site and will link directly to your profile."
+              >
+                <div className="space-y-3">
                   {data.personalInfo.socials.map((social, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="flex flex-col gap-0.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const reordered = reorder(data.personalInfo.socials, i, 'up');
-                            updatePersonalInfo({ socials: reordered });
-                          }}
-                          disabled={i === 0}
-                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
-                        >
-                          <ArrowUp size={11} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const reordered = reorder(data.personalInfo.socials, i, 'down');
-                            updatePersonalInfo({ socials: reordered });
-                          }}
-                          disabled={i === data.personalInfo.socials.length - 1}
-                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
-                        >
-                          <ArrowDown size={11} />
-                        </button>
+                    <div
+                      key={i}
+                      className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs space-y-2"
+                    >
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        {/* Reorder Arrows */}
+                        <div className="flex sm:flex-col gap-1 items-center shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reordered = reorder(data.personalInfo.socials, i, 'up');
+                              updatePersonalInfo({ socials: reordered });
+                            }}
+                            disabled={i === 0}
+                            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20 rounded"
+                            title="Move up"
+                          >
+                            <ArrowUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reordered = reorder(data.personalInfo.socials, i, 'down');
+                              updatePersonalInfo({ socials: reordered });
+                            }}
+                            disabled={i === data.personalInfo.socials.length - 1}
+                            className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20 rounded"
+                            title="Move down"
+                          >
+                            <ArrowDown size={12} />
+                          </button>
+                        </div>
+
+                        {/* Platform / Site Name (e.g. GitHub, Facebook) */}
+                        <div className="w-full sm:w-44 shrink-0">
+                          <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                            Site Name
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/20 font-medium placeholder-zinc-400"
+                            placeholder="e.g. GitHub or Facebook"
+                            value={social.name}
+                            onChange={(e) => {
+                              const s = [...data.personalInfo.socials];
+                              s[i] = { ...s[i], name: e.target.value };
+                              updatePersonalInfo({ socials: s });
+                            }}
+                          />
+                        </div>
+
+                        {/* Profile Link URL */}
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-[10px] font-mono uppercase text-zinc-400 mb-1">
+                            Profile Link URL
+                          </label>
+                          <input
+                            type="text"
+                            className="w-full px-3 py-2 text-xs font-mono bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/20 placeholder-zinc-400"
+                            placeholder="https://facebook.com/yourprofile"
+                            value={social.url}
+                            onChange={(e) => {
+                              const s = [...data.personalInfo.socials];
+                              s[i] = { ...s[i], url: e.target.value };
+                              updatePersonalInfo({ socials: s });
+                            }}
+                          />
+                        </div>
+
+                        {/* Right side actions: Test Link + Delete Button */}
+                        <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0 pt-1 sm:pt-4">
+                          {social.url && (
+                            <a
+                              href={social.url.startsWith('http') ? social.url : `https://${social.url}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-2 text-zinc-400 hover:text-yellow-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                              title="Test link (opens profile)"
+                            >
+                              <ExternalLink size={15} />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updatePersonalInfo({
+                                socials: data.personalInfo.socials.filter((_, j) => j !== i),
+                              })
+                            }
+                            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                            title="Delete this link"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        className={inputCls + ' w-36 shrink-0 font-medium'}
-                        placeholder="Platform Name"
-                        value={social.name}
-                        onChange={(e) => {
-                          const s = [...data.personalInfo.socials];
-                          s[i] = { ...s[i], name: e.target.value };
-                          updatePersonalInfo({ socials: s });
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className={inputCls + ' flex-1 font-mono text-xs'}
-                        placeholder="https://..."
-                        value={social.url}
-                        onChange={(e) => {
-                          const s = [...data.personalInfo.socials];
-                          s[i] = { ...s[i], url: e.target.value };
-                          updatePersonalInfo({ socials: s });
-                        }}
-                      />
-                      {social.url && (
-                        <a
-                          href={social.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-2 text-zinc-400 hover:text-yellow-400 shrink-0"
-                          title="Open link"
-                        >
-                          <ExternalLink size={14} />
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => updatePersonalInfo({ socials: data.personalInfo.socials.filter((_, j) => j !== i) })}
-                        className="p-2 text-zinc-400 hover:text-red-500 shrink-0"
-                        title="Remove link"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+
+                      {/* Live preview badge */}
+                      <div className="text-[11px] font-mono text-zinc-500 flex items-center gap-1.5 pl-1 sm:pl-7">
+                        <span>Will show on website as:</span>
+                        <span className="text-yellow-500 dark:text-yellow-400 font-semibold underline decoration-dotted">
+                          {social.name.trim() ? social.name : '(Empty Site Name)'}
+                        </span>
+                        <span>→ links to:</span>
+                        <span className="truncate max-w-[240px] text-zinc-400">
+                          {social.url ? social.url : '(No link set)'}
+                        </span>
+                      </div>
                     </div>
                   ))}
+
                   <button
                     type="button"
-                    onClick={() => updatePersonalInfo({ socials: [...data.personalInfo.socials, { name: 'GitHub', url: 'https://github.com/' }] })}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-2"
+                    onClick={() =>
+                      updatePersonalInfo({
+                        socials: [
+                          ...data.personalInfo.socials,
+                          { name: '', url: 'https://' },
+                        ],
+                      })
+                    }
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg transition-colors mt-2"
                   >
                     <Plus size={14} /> Add Social Profile
                   </button>
