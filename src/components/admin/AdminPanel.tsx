@@ -1,1342 +1,1516 @@
 import React, { useState } from 'react';
 import {
-  ArrowLeft,
-  Save,
-  Plus,
-  Trash2,
-  Edit2,
-  RotateCcw,
-  Sparkles,
-  Layers,
-  Briefcase,
-  GraduationCap,
-  FileText,
-  User,
-  Settings,
-  Check,
-  ExternalLink,
-  Image as ImageIcon,
-  Upload,
+  ArrowLeft, User, FileText, Sparkles, Layers, Briefcase,
+  GraduationCap, BookOpen, Mail, Settings, RotateCcw,
+  Plus, Trash2, Upload, ChevronDown, ChevronUp, Eye, EyeOff,
+  Check, AlertCircle, Loader2, LogOut, Image as ImageIcon,
+  ArrowUp, ArrowDown, Share2, FileCheck, Palette, ExternalLink,
+  Sliders, ShieldCheck, Sun, Moon
 } from 'lucide-react';
 import { usePortfolio, TechSkillItem, PillarItem } from '../../context/PortfolioContext';
 import { AVAILABLE_ICON_NAMES, renderSkillIcon } from '../../utils/skillIcons';
 import { Project, Experience, Certification, BlogPost } from '../../types/portfolio';
+import { useAutoSave } from '../../hooks/useAutoSave';
+import { logout, changePassword } from '../../hooks/useApi';
 
 interface AdminPanelProps {
   onBackToSite: () => void;
+  onLogout: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
 }
 
+export type SidebarSection =
+  | 'overview'
+  | 'branding'
+  | 'hero'
+  | 'about'
+  | 'skills'
+  | 'experience'
+  | 'projects'
+  | 'education'
+  | 'blog'
+  | 'contact'
+  | 'socials'
+  | 'resume'
+  | 'theme'
+  | 'settings';
+
+const SIDEBAR_ITEMS: { id: SidebarSection; label: string; icon: React.ElementType; group: string }[] = [
+  { id: 'overview',    label: 'Dashboard',         icon: Sparkles,       group: 'Main' },
+  { id: 'branding',    label: 'Website Branding',  icon: ImageIcon,      group: 'Content' },
+  { id: 'hero',        label: 'Hero / Home',       icon: User,           group: 'Content' },
+  { id: 'about',       label: 'About Section',     icon: FileText,       group: 'Content' },
+  { id: 'skills',      label: 'Skills Matrix',     icon: Sparkles,       group: 'Content' },
+  { id: 'experience',  label: 'Experience',         icon: Briefcase,      group: 'Content' },
+  { id: 'projects',    label: 'Projects',          icon: Layers,         group: 'Content' },
+  { id: 'education',   label: 'Education & Certs', icon: GraduationCap,  group: 'Content' },
+  { id: 'blog',        label: 'Blog Section',      icon: BookOpen,       group: 'Content' },
+  { id: 'contact',     label: 'Contact Info',      icon: Mail,           group: 'Content' },
+  { id: 'socials',     label: 'Social Media',      icon: Share2,         group: 'Content' },
+  { id: 'resume',      label: 'Resume / CV',       icon: FileCheck,      group: 'Content' },
+  { id: 'theme',       label: 'Theme & Style',     icon: Palette,        group: 'Admin' },
+  { id: 'settings',    label: 'General & Password',icon: Settings,       group: 'Admin' },
+];
+
+const inputCls = 'w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/20 transition-colors placeholder-zinc-400';
+const labelCls = 'block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 uppercase tracking-wider';
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({
-  onBackToSite,
-  darkMode,
-  setDarkMode,
+  onBackToSite, onLogout, darkMode, setDarkMode,
 }) => {
   const {
-    data,
-    updatePersonalInfo,
-    updateAboutBio,
-    updatePillars,
-    addSkill,
-    updateSkill,
-    deleteSkill,
-    addProject,
-    updateProject,
-    deleteProject,
-    addExperience,
-    updateExperience,
-    deleteExperience,
-    updateEducation,
-    updateCertifications,
-    addBlogPost,
-    updateBlogPost,
-    deleteBlogPost,
-    resetToDefaults,
+    data, updatePersonalInfo, updateAboutBio, updatePillars,
+    addSkill, updateSkill, deleteSkill,
+    addProject, updateProject, deleteProject,
+    addExperience, updateExperience, deleteExperience,
+    updateEducation, updateCertifications,
+    addBlogPost, updateBlogPost, deleteBlogPost,
+    resetToDefaults, saveData,
   } = usePortfolio();
 
-  const [activeTab, setActiveTab] = useState<
-    'hero' | 'about' | 'skills' | 'projects' | 'experience' | 'education' | 'blog' | 'data'
-  >('hero');
+  const [activeSection, setActiveSection] = useState<SidebarSection>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const [saveToast, setSaveToast] = useState(false);
+  // Auto-save to backend database
+  const { status: saveStatus, lastSavedAt } = useAutoSave(data, true);
 
-  const triggerToast = () => {
-    setSaveToast(true);
-    setTimeout(() => setSaveToast(false), 2200);
-  };
+  // Password change state
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    callback: (base64Url: string) => void
+    callback: (base64: string) => void
   ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (typeof event.target?.result === 'string') {
-          callback(event.target.result);
-          triggerToast();
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (typeof ev.target?.result === 'string') callback(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    onLogout();
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError('');
+    setPwSuccess('');
+    if (pwNew !== pwConfirm) { setPwError('Passwords do not match'); return; }
+    if (pwNew.length < 8) { setPwError('New password must be at least 8 characters'); return; }
+    setPwLoading(true);
+    const result = await changePassword(pwCurrent, pwNew);
+    setPwLoading(false);
+    if (result.success) {
+      setPwSuccess('Password changed successfully!');
+      setPwCurrent(''); setPwNew(''); setPwConfirm('');
+    } else {
+      setPwError(result.error ?? 'Failed to change password');
     }
   };
 
-  // Preset portrait options for quick selection
-  const portraitPresets = [
-    { label: 'Current Studio Portrait', url: '/src/assets/images/hero_creative_portrait_1793815484427.jpg' },
-    { label: 'Fintech Workspace', url: '/src/assets/images/project_kroma_fintech_1793815484054.jpg' },
-    { label: 'Generative Sound Visualizer', url: '/src/assets/images/project_sound_spatial_1793815485462.jpg' },
-    { label: 'Editorial Publishing Display', url: '/src/assets/images/project_editorial_studio_1793815486069.jpg' },
-  ];
+  // Reordering helpers
+  const reorder = <T,>(list: T[], index: number, direction: 'up' | 'down'): T[] => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return list;
+    const copy = [...list];
+    const [moved] = copy.splice(index, 1);
+    copy.splice(targetIndex, 0, moved);
+    return copy;
+  };
 
-  // Local form states for adding items
-  const [newSkillName, setNewSkillName] = useState('');
-  const [newSkillCategory, setNewSkillCategory] = useState('Frontend');
-  const [newSkillIcon, setNewSkillIcon] = useState('Code2');
-
-  const [newBioParagraph, setNewBioParagraph] = useState('');
-
-  // Editing states
-  const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
+  const SaveBadge = () => {
+    if (saveStatus === 'saving') return (
+      <span className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
+        <Loader2 size={12} className="animate-spin text-yellow-400" /> Saving to database...
+      </span>
+    );
+    if (saveStatus === 'saved') return (
+      <span className="flex items-center gap-1.5 text-xs text-emerald-500 font-mono">
+        <Check size={12} /> Auto-Saved
+      </span>
+    );
+    if (saveStatus === 'error') return (
+      <span className="flex items-center gap-1.5 text-xs text-red-400 font-mono">
+        <AlertCircle size={12} /> Save failed
+      </span>
+    );
+    if (lastSavedAt) return (
+      <span className="text-xs text-zinc-500 font-mono">
+        Synced {lastSavedAt.toLocaleTimeString()}
+      </span>
+    );
+    return (
+      <span className="flex items-center gap-1 text-xs text-zinc-400 font-mono">
+        <ShieldCheck size={12} className="text-emerald-500" /> Auto-save active
+      </span>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-transparent text-zinc-900 dark:text-zinc-100 transition-colors font-sans pb-20">
-      {/* Admin Top Bar */}
-      <header className="sticky top-0 z-40 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onBackToSite}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 hover:border-amber-500 transition-colors"
-            >
-              <ArrowLeft size={14} />
-              <span>Exit Admin</span>
-            </button>
-            <div className="h-4 w-[1px] bg-zinc-300 dark:bg-zinc-700 hidden sm:block" />
-            <h1 className="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2">
-              <span className="text-amber-500 font-mono">✦</span>
-              <span>Portfolio Management Console</span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {saveToast && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1 rounded-md animate-in fade-in">
-                <Check size={14} />
-                <span>Changes Saved</span>
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex">
+      {/* ═══════════ SIDEBAR ═══════════ */}
+      <aside className={`${sidebarOpen ? 'w-60' : 'w-16'} shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-all duration-300 sticky top-0 h-screen select-none`}>
+        {/* Logo Header */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="text-yellow-400 font-extrabold font-mono text-xl">✦</span>
+            {sidebarOpen && (
+              <span className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                Admin Console
               </span>
             )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 p-1 rounded-md"
+            title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            {sidebarOpen ? <ChevronUp size={14} className="rotate-90" /> : <ChevronDown size={14} className="rotate-90" />}
+          </button>
+        </div>
 
+        {/* Sidebar Nav */}
+        <nav className="flex-1 py-3 overflow-y-auto px-2 space-y-4">
+          {['Main', 'Content', 'Admin'].map((group) => {
+            const items = SIDEBAR_ITEMS.filter((item) => item.group === group);
+            if (!items.length) return null;
+            return (
+              <div key={group} className="space-y-1">
+                {sidebarOpen && (
+                  <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    {group}
+                  </p>
+                )}
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const active = activeSection === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        active
+                          ? 'bg-yellow-400 text-zinc-950 font-bold shadow-sm'
+                          : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                      }`}
+                      title={item.label}
+                    >
+                      <Icon size={15} className="shrink-0" />
+                      {sidebarOpen && <span className="truncate">{item.label}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Footer actions */}
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-3 shrink-0 space-y-1">
+          <button
+            type="button"
+            onClick={onBackToSite}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={14} className="shrink-0" />
+            {sidebarOpen && 'View Live Website'}
+          </button>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+          >
+            <LogOut size={14} className="shrink-0" />
+            {sidebarOpen && 'Logout'}
+          </button>
+        </div>
+      </aside>
+
+      {/* ═══════════ MAIN CONTENT AREA ═══════════ */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-30 h-16 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="font-bold text-base text-zinc-900 dark:text-white">
+              {SIDEBAR_ITEMS.find((i) => i.id === activeSection)?.label}
+            </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <SaveBadge />
             <button
               type="button"
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs"
-              title="Toggle Theme"
+              className="p-2 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs"
+              title="Toggle theme"
             >
-              {darkMode ? '🌙 Dark' : '☀️ Light'}
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-
             <button
               type="button"
               onClick={onBackToSite}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-zinc-950 rounded-lg shadow-sm transition-colors"
+              className="px-3.5 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg shadow-sm transition-colors"
             >
-              View Live Site
+              Live Site →
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Admin Content */}
-      <div className="max-w-7xl mx-auto px-6 pt-8">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-4 mb-8 border-b border-zinc-200 dark:border-zinc-800 no-scrollbar">
-          {[
-            { id: 'hero', label: 'Hero & Identity', icon: User },
-            { id: 'about', label: 'About & Pillars', icon: FileText },
-            { id: 'skills', label: 'Skills Matrix', icon: Sparkles },
-            { id: 'projects', label: 'Projects & Work', icon: Layers },
-            { id: 'experience', label: 'Experience', icon: Briefcase },
-            { id: 'education', label: 'Education & Certs', icon: GraduationCap },
-            { id: 'blog', label: 'Blog Posts', icon: Edit2 },
-            { id: 'data', label: 'Data & Reset', icon: Settings },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-amber-400 text-zinc-950 shadow-sm'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-900'
-                }`}
-              >
-                <Icon size={15} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Scrollable Container */}
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-5xl">
 
-        {/* ============================================================== */}
-        {/* TAB 1: HERO & IDENTITY */}
-        {/* ============================================================== */}
-        {activeTab === 'hero' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <h2 className="text-xl font-bold tracking-tight">Identity &amp; Hero Section</h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Configure your brand name, core headline, tagline, and portrait imagery.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                    Brand Name / Logo Text
-                  </label>
-                  <input
-                    type="text"
-                    value={data.personalInfo.name}
-                    onChange={(e) => {
-                      updatePersonalInfo({ name: e.target.value });
-                      triggerToast();
-                    }}
-                    className="w-full px-4 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                    Professional Title
-                  </label>
-                  <input
-                    type="text"
-                    value={data.personalInfo.title}
-                    onChange={(e) => {
-                      updatePersonalInfo({ title: e.target.value });
-                      triggerToast();
-                    }}
-                    className="w-full px-4 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
+          {/* ════ 1. DASHBOARD OVERVIEW ════ */}
+          {activeSection === 'overview' && (
+            <div className="space-y-6">
               <div>
-                <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                  Hero Tagline / Manifesto
-                </label>
-                <textarea
-                  rows={3}
-                  value={data.personalInfo.tagline}
-                  onChange={(e) => {
-                    updatePersonalInfo({ tagline: e.target.value });
-                    triggerToast();
-                  }}
-                  className="w-full px-4 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                />
+                <h1 className="text-2xl font-bold tracking-tight">Portfolio Overview</h1>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+                  Control every element of your portfolio in real time. Changes automatically persist to the database.
+                </p>
               </div>
 
-              {/* Portrait Image Selection */}
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-                  <ImageIcon size={16} className="text-amber-500" />
-                  <span>Hero Portrait Image</span>
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  <div className="lg:col-span-8 space-y-4">
-                    <div>
-                      <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                        Image URL / File Path
-                      </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Projects',   count: data.projects.length,    icon: '🗂️' },
+                  { label: 'Blog Posts', count: data.blogPosts.length,   icon: '✍️' },
+                  { label: 'Skills',     count: data.skills.length,      icon: '⚡' },
+                  { label: 'Experience', count: data.experiences.length, icon: '🏢' },
+                ].map((stat) => (
+                  <div key={stat.label} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs">
+                    <div className="text-2xl mb-1.5">{stat.icon}</div>
+                    <div className="text-2xl font-bold">{stat.count}</div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <SectionCard title="Quick Management Links" description="Jump directly to any section to start editing.">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                  {SIDEBAR_ITEMS.filter((i) => i.group === 'Content').map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveSection(item.id)}
+                        className="flex items-center gap-2 p-3 text-xs font-medium rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-yellow-400 hover:bg-yellow-400/5 hover:text-yellow-500 transition-all text-left"
+                      >
+                        <Icon size={14} className="shrink-0 text-yellow-400" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ════ 2. WEBSITE BRANDING ════ */}
+          {activeSection === 'branding' && (
+            <div className="space-y-6">
+              <SectionCard title="Website Logo & Brand Display" description="Customize how your name and logo appear in the navigation bar.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Logo Text">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.logoText || data.personalInfo.name}
+                      onChange={(e) => updatePersonalInfo({ logoText: e.target.value })}
+                      placeholder="M. Hasan"
+                    />
+                    <p className="mt-1 text-[11px] text-zinc-500">First letter is highlighted with the yellow accent color.</p>
+                  </Field>
+
+                  <Field label="Display Mode">
+                    <select
+                      className={inputCls}
+                      value={data.personalInfo.logoType || 'text'}
+                      onChange={(e) => updatePersonalInfo({ logoType: e.target.value as any })}
+                    >
+                      <option value="text">Text Only (Modern Minimal)</option>
+                      <option value="image">Image / Icon Only</option>
+                      <option value="both">Image + Text Combined</option>
+                    </select>
+                  </Field>
+
+                  <Field label="Logo Font Size">
+                    <select
+                      className={inputCls}
+                      value={data.personalInfo.logoFontSize || 'text-xl'}
+                      onChange={(e) => updatePersonalInfo({ logoFontSize: e.target.value as any })}
+                    >
+                      <option value="text-base">Small (text-base)</option>
+                      <option value="text-lg">Medium (text-lg)</option>
+                      <option value="text-xl">Default Large (text-xl)</option>
+                      <option value="text-2xl">Extra Large (text-2xl)</option>
+                    </select>
+                  </Field>
+
+                  <Field label="Full Display Name (Used across page)">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.fullName || ''}
+                      onChange={(e) => updatePersonalInfo({ fullName: e.target.value })}
+                      placeholder="Mossadik Hasan"
+                    />
+                  </Field>
+                </div>
+
+                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <Field label="Brand / Profile Image (Optional Icon/Avatar)">
+                    <div className="flex gap-4 items-center">
                       <input
                         type="text"
-                        value={data.personalInfo.heroPortrait}
-                        onChange={(e) => {
-                          updatePersonalInfo({ heroPortrait: e.target.value });
-                          triggerToast();
-                        }}
-                        className="w-full px-4 py-2.5 text-sm font-mono bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
+                        className={inputCls + ' font-mono text-xs'}
+                        value={data.personalInfo.logoImage || ''}
+                        onChange={(e) => updatePersonalInfo({ logoImage: e.target.value })}
+                        placeholder="Image URL or upload below..."
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                        Or Upload Image from Computer
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-amber-400 transition-colors bg-zinc-50 dark:bg-zinc-950 text-xs font-mono text-zinc-500 hover:text-amber-500 w-fit">
-                        <Upload size={14} />
-                        <span>Choose Portrait File</span>
+                      <label className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg cursor-pointer shrink-0 transition-colors">
+                        <Upload size={13} />
+                        Upload
                         <input
                           type="file"
                           accept="image/*"
                           className="hidden"
-                          onChange={(e) => handleFileUpload(e, (base64Url) => updatePersonalInfo({ heroPortrait: base64Url }))}
+                          onChange={(e) => handleFileUpload(e, (b64) => updatePersonalInfo({ logoImage: b64 }))}
                         />
                       </label>
                     </div>
+                  </Field>
+                </div>
 
-                    <div>
-                      <span className="block text-xs font-mono uppercase text-zinc-500 mb-2">
-                        Quick Preset Selection:
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {portraitPresets.map((preset) => (
-                          <button
-                            key={preset.url}
-                            type="button"
-                            onClick={() => {
-                              updatePersonalInfo({ heroPortrait: preset.url });
-                              triggerToast();
-                            }}
-                            className={`p-2.5 text-left text-xs font-mono rounded-lg border transition-all ${
-                              data.personalInfo.heroPortrait === preset.url
-                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold'
-                                : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 hover:border-zinc-400'
-                            }`}
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
-                      </div>
+                {/* Live Preview */}
+                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <p className="text-xs font-mono uppercase text-zinc-500 mb-2">Live Logo Navbar Preview</p>
+                  <div className="p-4 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      {((data.personalInfo.logoType === 'image' || data.personalInfo.logoType === 'both') && data.personalInfo.logoImage) && (
+                        <img src={data.personalInfo.logoImage} alt="Logo preview" className="w-8 h-8 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700" />
+                      )}
+                      {(data.personalInfo.logoType !== 'image' || !data.personalInfo.logoImage) && (
+                        <div className={`font-bold font-mono ${data.personalInfo.logoFontSize || 'text-xl'}`}>
+                          <span className="text-yellow-400 font-extrabold">
+                            {(data.personalInfo.logoText || data.personalInfo.name).charAt(0)}
+                          </span>
+                          <span className="text-zinc-900 dark:text-white">
+                            {(data.personalInfo.logoText || data.personalInfo.name).slice(1)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Live Preview */}
-                  <div className="lg:col-span-4 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-950 aspect-[4/5] relative">
-                    <img
-                      src={data.personalInfo.heroPortrait}
-                      alt="Hero preview"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover grayscale contrast-125"
-                    />
-                    <div className="absolute bottom-2 left-2 text-[10px] font-mono bg-black/80 px-2 py-0.5 rounded text-white">
-                      Live Preview
-                    </div>
+                    <span className="text-[11px] font-mono text-zinc-400">Preview</span>
                   </div>
                 </div>
-              </div>
+              </SectionCard>
+            </div>
+          )}
 
-              {/* Stats Metrics */}
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <h3 className="text-sm font-bold mb-3">Key Metrics Row</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {data.personalInfo.stats.map((stat, idx) => (
-                    <div key={idx} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-2">
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">
-                          Value
-                        </label>
+          {/* ════ 3. HERO / HOME SECTION ════ */}
+          {activeSection === 'hero' && (
+            <div className="space-y-6">
+              <SectionCard title="Hero Headlines & Tagline" description="Main banner typography seen when visitors first land on your portfolio.">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Field label="Headline Line 1">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={(data.personalInfo as any).heroHeadlineLine1 || 'Creative'}
+                      onChange={(e) => updatePersonalInfo({ heroHeadlineLine1: e.target.value } as any)}
+                    />
+                  </Field>
+                  <Field label="Accent Keyword (Italicized/Highlighted)">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={(data.personalInfo as any).heroHeadlineAccent || 'technologist'}
+                      onChange={(e) => updatePersonalInfo({ heroHeadlineAccent: e.target.value } as any)}
+                    />
+                  </Field>
+                  <Field label="Headline Line 2">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={(data.personalInfo as any).heroHeadlineLine2 || '& Senior Frontend Engineer'}
+                      onChange={(e) => updatePersonalInfo({ heroHeadlineLine2: e.target.value } as any)}
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Professional Title">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.title}
+                      onChange={(e) => updatePersonalInfo({ title: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Availability Status">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.availability || ''}
+                      onChange={(e) => updatePersonalInfo({ availability: e.target.value })}
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Tagline / Manifesto">
+                  <textarea
+                    rows={2}
+                    className={inputCls}
+                    value={data.personalInfo.tagline}
+                    onChange={(e) => updatePersonalInfo({ tagline: e.target.value })}
+                  />
+                </Field>
+              </SectionCard>
+
+              <SectionCard title="Hero Portrait Imagery" description="Upload your creative headshot or project visual.">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  <div className="md:col-span-8 space-y-3">
+                    <Field label="Portrait Image URL or Path">
+                      <input
+                        type="text"
+                        className={inputCls + ' font-mono text-xs'}
+                        value={data.personalInfo.heroPortrait}
+                        onChange={(e) => updatePersonalInfo({ heroPortrait: e.target.value })}
+                      />
+                    </Field>
+                    <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg transition-colors">
+                      <Upload size={14} />
+                      Upload New Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, (b64) => updatePersonalInfo({ heroPortrait: b64 }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="md:col-span-4 rounded-xl overflow-hidden bg-zinc-900 aspect-[4/5] border border-zinc-200 dark:border-zinc-800 max-w-[200px]">
+                    <img src={data.personalInfo.heroPortrait} alt="Portrait preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Metrics & Performance Counters" description="The 4 stat counters featured in the hero section.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {data.personalInfo.stats.map((stat, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-2">
+                      <Field label={`Stat #${i + 1} Value`}>
                         <input
                           type="text"
+                          className={inputCls + ' font-bold text-yellow-500 font-mono'}
                           value={stat.value}
                           onChange={(e) => {
-                            const newStats = [...data.personalInfo.stats];
-                            newStats[idx].value = e.target.value;
-                            updatePersonalInfo({ stats: newStats });
-                            triggerToast();
+                            const next = [...data.personalInfo.stats];
+                            next[i] = { ...next[i], value: e.target.value };
+                            updatePersonalInfo({ stats: next });
                           }}
-                          className="w-full px-3 py-1.5 text-sm font-mono font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded text-amber-500"
                         />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">
-                          Label
-                        </label>
+                      </Field>
+                      <Field label="Label">
                         <input
                           type="text"
+                          className={inputCls}
                           value={stat.label}
                           onChange={(e) => {
-                            const newStats = [...data.personalInfo.stats];
-                            newStats[idx].label = e.target.value;
-                            updatePersonalInfo({ stats: newStats });
-                            triggerToast();
+                            const next = [...data.personalInfo.stats];
+                            next[i] = { ...next[i], label: e.target.value };
+                            updatePersonalInfo({ stats: next });
                           }}
-                          className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded text-zinc-700 dark:text-zinc-300"
                         />
-                      </div>
+                      </Field>
                     </div>
                   ))}
                 </div>
-              </div>
+              </SectionCard>
+            </div>
+          )}
 
-              {/* Social Links (Horizontally docked in hero) */}
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold">Social Links (Docked in Hero)</h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSocials = [...data.personalInfo.socials, { name: 'New Platform', url: 'https://' }];
-                      updatePersonalInfo({ socials: newSocials });
-                      triggerToast();
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-amber-500 hover:underline"
-                  >
-                    <Plus size={14} />
-                    <span>Add Social Link</span>
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {data.personalInfo.socials.map((soc, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-                      <input
-                        type="text"
-                        value={soc.name}
+          {/* ════ 4. ABOUT SECTION ════ */}
+          {activeSection === 'about' && (
+            <div className="space-y-6">
+              <SectionCard title="About Heading">
+                <Field label="Header Title">
+                  <input
+                    type="text"
+                    className={inputCls}
+                    value={(data.personalInfo as any).aboutHeading || 'This is Mossadik Hasan'}
+                    onChange={(e) => updatePersonalInfo({ aboutHeading: e.target.value } as any)}
+                  />
+                </Field>
+              </SectionCard>
+
+              <SectionCard title="Bio Paragraphs" description="Add, edit, or remove paragraphs in your about section.">
+                <div className="space-y-3">
+                  {data.aboutBio.map((para, i) => (
+                    <div key={i} className="flex gap-2">
+                      <textarea
+                        rows={3}
+                        className={inputCls + ' resize-none'}
+                        value={para}
                         onChange={(e) => {
-                          const updated = [...data.personalInfo.socials];
-                          updated[idx].name = e.target.value;
-                          updatePersonalInfo({ socials: updated });
-                          triggerToast();
+                          const copy = [...data.aboutBio];
+                          copy[i] = e.target.value;
+                          updateAboutBio(copy);
                         }}
-                        className="w-28 px-2.5 py-1 text-xs font-semibold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded"
-                      />
-                      <input
-                        type="text"
-                        value={soc.url}
-                        onChange={(e) => {
-                          const updated = [...data.personalInfo.socials];
-                          updated[idx].url = e.target.value;
-                          updatePersonalInfo({ socials: updated });
-                          triggerToast();
-                        }}
-                        className="flex-1 px-2.5 py-1 text-xs font-mono bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded truncate"
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          const updated = data.personalInfo.socials.filter((_, i) => i !== idx);
-                          updatePersonalInfo({ socials: updated });
-                          triggerToast();
-                        }}
-                        className="p-1 text-zinc-400 hover:text-rose-500"
+                        onClick={() => updateAboutBio(data.aboutBio.filter((_, j) => j !== i))}
+                        className="p-2 text-zinc-400 hover:text-red-500 self-start rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
+                        title="Delete paragraph"
                       >
                         <Trash2 size={15} />
                       </button>
                     </div>
                   ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB 2: ABOUT & PILLARS */}
-        {/* ============================================================== */}
-        {activeTab === 'about' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <h2 className="text-xl font-bold tracking-tight">About Me Narrative &amp; Pillars</h2>
-
-              {/* Bio Paragraphs */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Bio Paragraphs</h3>
                   <button
                     type="button"
-                    onClick={() => {
-                      updateAboutBio([...data.aboutBio, 'New statement about your engineering craft.']);
-                      triggerToast();
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-amber-500 hover:underline"
+                    onClick={() => updateAboutBio([...data.aboutBio, 'New bio paragraph...'])}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400"
                   >
-                    <Plus size={14} />
-                    <span>Add Paragraph</span>
+                    <Plus size={14} /> Add Paragraph
                   </button>
                 </div>
-                {data.aboutBio.map((paragraph, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <textarea
-                      rows={2}
-                      value={paragraph}
-                      onChange={(e) => {
-                        const next = [...data.aboutBio];
-                        next[idx] = e.target.value;
-                        updateAboutBio(next);
-                        triggerToast();
-                      }}
-                      className="flex-1 px-4 py-2 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                    />
+              </SectionCard>
+
+              <SectionCard title="Core Engineering Pillars" description="The 3 philosophy cards in the About section.">
+                {data.pillars.map((pillar, i) => (
+                  <div key={i} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-3 mb-3">
+                    <div className="grid grid-cols-5 gap-3">
+                      <Field label="Number" className="col-span-1">
+                        <input
+                          type="text"
+                          className={inputCls + ' text-center font-mono'}
+                          value={pillar.index}
+                          onChange={(e) => {
+                            const p = [...data.pillars];
+                            p[i] = { ...p[i], index: e.target.value };
+                            updatePillars(p);
+                          }}
+                        />
+                      </Field>
+                      <Field label="Title" className="col-span-4">
+                        <input
+                          type="text"
+                          className={inputCls}
+                          value={pillar.title}
+                          onChange={(e) => {
+                            const p = [...data.pillars];
+                            p[i] = { ...p[i], title: e.target.value };
+                            updatePillars(p);
+                          }}
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Description">
+                      <textarea
+                        rows={2}
+                        className={inputCls + ' resize-none'}
+                        value={pillar.description}
+                        onChange={(e) => {
+                          const p = [...data.pillars];
+                          p[i] = { ...p[i], description: e.target.value };
+                          updatePillars(p);
+                        }}
+                      />
+                    </Field>
+                  </div>
+                ))}
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ════ 5. SKILLS MATRIX ════ */}
+          {activeSection === 'skills' && (
+            <div className="space-y-6">
+              <SectionCard title={`Skills Matrix (${data.skills.length})`} description="Manage technical skills, assign categories, and reorder.">
+                <div className="space-y-2 mb-4">
+                  {data.skills.map((skill, index) => (
+                    <div key={skill.id} className="flex items-center gap-2 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => saveData({ ...data, skills: reorder(data.skills, index, 'up') })}
+                          disabled={index === 0}
+                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+                          title="Move up"
+                        >
+                          <ArrowUp size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => saveData({ ...data, skills: reorder(data.skills, index, 'down') })}
+                          disabled={index === data.skills.length - 1}
+                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+                          title="Move down"
+                        >
+                          <ArrowDown size={11} />
+                        </button>
+                      </div>
+                      <span className="text-zinc-500 shrink-0 w-6 flex justify-center">{renderSkillIcon(skill.iconName)}</span>
+                      <input
+                        type="text"
+                        className={inputCls + ' flex-1 py-1.5 text-xs'}
+                        value={skill.name}
+                        onChange={(e) => updateSkill(skill.id, { name: e.target.value })}
+                      />
+                      <input
+                        type="text"
+                        className={inputCls + ' w-32 py-1.5 text-xs'}
+                        value={skill.category}
+                        onChange={(e) => updateSkill(skill.id, { category: e.target.value })}
+                        placeholder="Category"
+                      />
+                      <select
+                        className={inputCls + ' w-32 py-1.5 text-xs'}
+                        value={skill.iconName}
+                        onChange={(e) => updateSkill(skill.id, { iconName: e.target.value })}
+                      >
+                        {AVAILABLE_ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => deleteSkill(skill.id)}
+                        className="p-1.5 text-zinc-400 hover:text-red-500 shrink-0"
+                        title="Delete skill"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <AddSkillForm onAdd={(skill) => addSkill(skill)} />
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ════ 6. EXPERIENCE SECTION ════ */}
+          {activeSection === 'experience' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Experience ({data.experiences.length})</h2>
+                  <p className="text-xs text-zinc-500">Work history, roles, and technologies used.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addExperience({
+                    id: 'exp-' + Date.now(), company: 'New Company', role: 'Role Title',
+                    period: '2024–Present', location: 'Remote', type: 'Full-time',
+                    description: 'Description of key responsibilities and impact...',
+                    achievements: [], stack: [],
+                  })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg"
+                >
+                  <Plus size={14} /> Add Role
+                </button>
+              </div>
+
+              {data.experiences.map((exp, index) => (
+                <ExperienceCard
+                  key={exp.id}
+                  exp={exp}
+                  index={index}
+                  total={data.experiences.length}
+                  onMove={(dir) => saveData({ ...data, experiences: reorder(data.experiences, index, dir) })}
+                  onUpdate={(u) => updateExperience(exp.id, u)}
+                  onDelete={() => deleteExperience(exp.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ════ 7. PROJECTS SECTION ════ */}
+          {activeSection === 'projects' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Projects ({data.projects.length})</h2>
+                  <p className="text-xs text-zinc-500">Case studies, architecture solutions, metrics, and live links.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addProject({
+                    id: 'proj-' + Date.now(), title: 'New Project Title', subtitle: 'Project subtitle or mission',
+                    category: 'Fintech', year: '2025', role: 'Frontend Architect', image: '',
+                    summary: 'Overview of the project and architectural challenges.',
+                    challenge: 'Specific engineering or user experience hurdles.',
+                    solution: 'Design systems and architectural implementation.',
+                    metrics: [{ label: 'Throughput', value: '12k req/s' }],
+                    technologies: ['React 19', 'TypeScript', 'Tailwind CSS'],
+                    liveUrl: '', githubUrl: '', featured: true,
+                  })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg"
+                >
+                  <Plus size={14} /> Add Project
+                </button>
+              </div>
+
+              {data.projects.map((proj, index) => (
+                <ProjectCard
+                  key={proj.id}
+                  proj={proj}
+                  index={index}
+                  total={data.projects.length}
+                  onMove={(dir) => saveData({ ...data, projects: reorder(data.projects, index, dir) })}
+                  onUpdate={(u) => updateProject(proj.id, u)}
+                  onDelete={() => deleteProject(proj.id)}
+                  onFileUpload={handleFileUpload}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* ════ 8. EDUCATION & CERTS ════ */}
+          {activeSection === 'education' && (
+            <div className="space-y-6">
+              <SectionCard title="Degrees & Academic Qualifications">
+                {data.education.map((edu, i) => (
+                  <div key={i} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Degree / Program">
+                        <input type="text" className={inputCls} value={edu.degree} onChange={(e) => {
+                          const d = [...data.education]; d[i] = { ...d[i], degree: e.target.value }; updateEducation(d);
+                        }} />
+                      </Field>
+                      <Field label="Institution / University">
+                        <input type="text" className={inputCls} value={edu.institution} onChange={(e) => {
+                          const d = [...data.education]; d[i] = { ...d[i], institution: e.target.value }; updateEducation(d);
+                        }} />
+                      </Field>
+                      <Field label="Period (e.g. 2020–2024)">
+                        <input type="text" className={inputCls} value={edu.period} onChange={(e) => {
+                          const d = [...data.education]; d[i] = { ...d[i], period: e.target.value }; updateEducation(d);
+                        }} />
+                      </Field>
+                      <Field label="Location">
+                        <input type="text" className={inputCls} value={(edu as any).location || ''} onChange={(e) => {
+                          const d = [...data.education]; d[i] = { ...d[i], location: e.target.value }; updateEducation(d);
+                        }} />
+                      </Field>
+                    </div>
+                    <Field label="Description">
+                      <textarea rows={2} className={inputCls + ' resize-none'} value={edu.description || ''} onChange={(e) => {
+                        const d = [...data.education]; d[i] = { ...d[i], description: e.target.value }; updateEducation(d);
+                      }} />
+                    </Field>
                     <button
                       type="button"
-                      onClick={() => {
-                        updateAboutBio(data.aboutBio.filter((_, i) => i !== idx));
-                        triggerToast();
-                      }}
-                      className="p-2 text-zinc-400 hover:text-rose-500"
+                      onClick={() => updateEducation(data.education.filter((_, j) => j !== i))}
+                      className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 font-medium"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={13} /> Delete Degree
                     </button>
                   </div>
                 ))}
-              </div>
+                <button
+                  type="button"
+                  onClick={() => updateEducation([...data.education, { degree: 'B.Sc. in Computer Science', institution: 'University Name', period: '2020–2024', description: '' } as any])}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400"
+                >
+                  <Plus size={14} /> Add Degree
+                </button>
+              </SectionCard>
 
-              {/* Pillars */}
-              <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Core Engineering Pillars</h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextPillars = [
-                        ...data.pillars,
-                        {
-                          index: `0${data.pillars.length + 1}`,
-                          title: 'New Discipline',
-                          description: 'Description of your architectural approach.',
-                        },
-                      ];
-                      updatePillars(nextPillars);
-                      triggerToast();
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-amber-500 hover:underline"
-                  >
-                    <Plus size={14} />
-                    <span>Add Pillar</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {data.pillars.map((pillar, idx) => (
-                    <div key={idx} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <input
-                          type="text"
-                          value={pillar.index}
-                          onChange={(e) => {
-                            const next = [...data.pillars];
-                            next[idx].index = e.target.value;
-                            updatePillars(next);
-                            triggerToast();
-                          }}
-                          className="w-14 px-2 py-1 text-xs font-mono font-bold bg-white dark:bg-zinc-900 border rounded text-amber-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updatePillars(data.pillars.filter((_, i) => i !== idx));
-                            triggerToast();
-                          }}
-                          className="p-1 text-zinc-400 hover:text-rose-500"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={pillar.title}
-                        onChange={(e) => {
-                          const next = [...data.pillars];
-                          next[idx].title = e.target.value;
-                          updatePillars(next);
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-sm font-bold bg-white dark:bg-zinc-900 border rounded"
-                      />
-                      <textarea
-                        rows={3}
-                        value={pillar.description}
-                        onChange={(e) => {
-                          const next = [...data.pillars];
-                          next[idx].description = e.target.value;
-                          updatePillars(next);
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                      />
+              <SectionCard title="Certifications & Honors">
+                <div className="space-y-2 mb-3">
+                  {data.certifications.map((cert, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input type="text" className={inputCls + ' flex-1'} placeholder="Certification title" value={cert.name} onChange={(e) => {
+                        const c = [...data.certifications]; c[i] = { ...c[i], name: e.target.value }; updateCertifications(c);
+                      }} />
+                      <input type="text" className={inputCls + ' w-32'} placeholder="Issuer" value={cert.issuer} onChange={(e) => {
+                        const c = [...data.certifications]; c[i] = { ...c[i], issuer: e.target.value }; updateCertifications(c);
+                      }} />
+                      <input type="text" className={inputCls + ' w-20'} placeholder="Year" value={cert.year} onChange={(e) => {
+                        const c = [...data.certifications]; c[i] = { ...c[i], year: e.target.value }; updateCertifications(c);
+                      }} />
+                      <button type="button" onClick={() => updateCertifications(data.certifications.filter((_, j) => j !== i))} className="p-2 text-zinc-400 hover:text-red-500">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB 3: SKILLS MATRIX (ADD & DELETE & EDIT) */}
-        {/* ============================================================== */}
-        {activeTab === 'skills' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            {/* Add New Skill Form */}
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-4">
-              <h2 className="text-xl font-bold tracking-tight">Add New Skill</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                    Technology Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bun / GraphQL / WebGPU"
-                    value={newSkillName}
-                    onChange={(e) => setNewSkillName(e.target.value)}
-                    className="w-full px-4 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                    Category
-                  </label>
-                  <select
-                    value={newSkillCategory}
-                    onChange={(e) => setNewSkillCategory(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="Frontend">Frontend</option>
-                    <option value="Kinetic">Kinetic</option>
-                    <option value="Graphics">Graphics</option>
-                    <option value="Backend & Tools">Backend &amp; Tools</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase text-zinc-500 mb-1.5">
-                    Icon
-                  </label>
-                  <select
-                    value={newSkillIcon}
-                    onChange={(e) => setNewSkillIcon(e.target.value)}
-                    className="w-full px-3 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-amber-500 font-mono"
-                  >
-                    {AVAILABLE_ICON_NAMES.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!newSkillName.trim()) return;
-                    addSkill({
-                      name: newSkillName.trim(),
-                      category: newSkillCategory,
-                      iconName: newSkillIcon,
-                    });
-                    setNewSkillName('');
-                    triggerToast();
-                  }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-zinc-950 rounded-lg shadow-sm transition-colors"
+                  onClick={() => updateCertifications([...data.certifications, { name: 'New Certification', issuer: 'Issuer Organization', year: '2025' } as any])}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400"
                 >
-                  <Plus size={15} />
-                  <span>Add Skill to Matrix</span>
+                  <Plus size={14} /> Add Certification
                 </button>
-              </div>
+              </SectionCard>
             </div>
+          )}
 
-            {/* Existing Skills List (Edit & Delete) */}
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          {/* ════ 9. BLOG SECTION ════ */}
+          {activeSection === 'blog' && (
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold">Current Active Skills ({data.skills.length})</h3>
-                  <p className="text-xs text-zinc-500">Edit technology names, categories, icons, or delete.</p>
+                  <h2 className="text-lg font-bold">Articles & Essays ({data.blogPosts.length})</h2>
+                  <p className="text-xs text-zinc-500">Editorial writings, tutorials, and engineering perspectives.</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => addBlogPost({
+                    id: 'post-' + Date.now(), title: 'New Perspective Article', category: 'Engineering',
+                    slug: 'article-' + Date.now(),
+                    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                    readTime: '4 min read', excerpt: 'Short summary of the article...',
+                    content: 'Write your full content here in markdown...', image: '', featured: false,
+                  })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg"
+                >
+                  <Plus size={14} /> Add Article
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {data.skills.map((skill) => (
-                  <div
-                    key={skill.id}
-                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3 relative group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800">
-                        {renderSkillIcon(skill.iconName)}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          deleteSkill(skill.id);
-                          triggerToast();
-                        }}
-                        className="text-zinc-400 hover:text-rose-500 transition-colors p-1"
-                        title="Delete Skill"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              {data.blogPosts.map((post, index) => (
+                <BlogCard
+                  key={post.id}
+                  post={post}
+                  index={index}
+                  total={data.blogPosts.length}
+                  onMove={(dir) => saveData({ ...data, blogPosts: reorder(data.blogPosts, index, dir) })}
+                  onUpdate={(u) => updateBlogPost(post.id, u)}
+                  onDelete={() => deleteBlogPost(post.id)}
+                  onFileUpload={handleFileUpload}
+                />
+              ))}
+            </div>
+          )}
 
+          {/* ════ 10. CONTACT INFORMATION ════ */}
+          {activeSection === 'contact' && (
+            <div className="space-y-6">
+              <SectionCard title="Contact Channels & Details" description="Information used by recruiters and clients to get in touch.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Email Address">
+                    <input
+                      type="email"
+                      className={inputCls}
+                      value={data.personalInfo.email}
+                      onChange={(e) => updatePersonalInfo({ email: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Location">
                     <input
                       type="text"
-                      value={skill.name}
-                      onChange={(e) => {
-                        updateSkill(skill.id, { name: e.target.value });
-                        triggerToast();
-                      }}
-                      className="w-full px-2.5 py-1 text-sm font-bold bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded"
+                      className={inputCls}
+                      value={data.personalInfo.location}
+                      onChange={(e) => updatePersonalInfo({ location: e.target.value })}
                     />
-
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <select
-                        value={skill.category}
-                        onChange={(e) => {
-                          updateSkill(skill.id, { category: e.target.value });
-                          triggerToast();
-                        }}
-                        className="px-2 py-1 bg-white dark:bg-zinc-900 border rounded"
-                      >
-                        <option value="Frontend">Frontend</option>
-                        <option value="Kinetic">Kinetic</option>
-                        <option value="Graphics">Graphics</option>
-                        <option value="Backend & Tools">Tools</option>
-                      </select>
-
-                      <select
-                        value={skill.iconName}
-                        onChange={(e) => {
-                          updateSkill(skill.id, { iconName: e.target.value });
-                          triggerToast();
-                        }}
-                        className="px-2 py-1 bg-white dark:bg-zinc-900 border rounded font-mono text-[11px]"
-                      >
-                        {AVAILABLE_ICON_NAMES.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  </Field>
+                  <Field label="Timezone">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.timezone || ''}
+                      onChange={(e) => updatePersonalInfo({ timezone: e.target.value })}
+                      placeholder="e.g. Asia/Dhaka"
+                    />
+                  </Field>
+                  <Field label="Availability Note">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={data.personalInfo.availability || ''}
+                      onChange={(e) => updatePersonalInfo({ availability: e.target.value })}
+                      placeholder="Open for Select Contracts"
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ============================================================== */}
-        {/* TAB 4: PROJECTS MANAGEMENT */}
-        {/* ============================================================== */}
-        {activeTab === 'projects' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            {/* Add Project */}
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">Case Studies &amp; Projects ({data.projects.length})</h2>
-                  <p className="text-xs text-zinc-500">Edit titles, metrics, images, and engineering solutions.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newProj: Project = {
-                      id: 'proj-' + Date.now(),
-                      title: 'New Featured System',
-                      subtitle: 'Architecture description',
-                      category: 'Fintech',
-                      year: '2026',
-                      role: 'Lead Architect',
-                      image: '/src/assets/images/project_kroma_fintech_1793815484054.jpg',
-                      summary: 'Summary of the system, performance benchmarks, and core impact.',
-                      challenge: 'The technical challenge or architectural hurdle.',
-                      solution: 'The solution implemented.',
-                      metrics: [
-                        { label: 'Metric A', value: '100%' },
-                        { label: 'Metric B', value: '< 1ms' },
-                      ],
-                      technologies: ['React 19', 'TypeScript', 'Tailwind CSS'],
-                      featured: false,
-                    };
-                    addProject(newProj);
-                    triggerToast();
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-zinc-950 rounded-lg shadow-sm"
-                >
-                  <Plus size={15} />
-                  <span>Create Project</span>
-                </button>
-              </div>
-
-              {/* Projects List */}
-              <div className="space-y-6 pt-4">
-                {data.projects.map((proj) => (
-                  <div
-                    key={proj.id}
-                    className="p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-4"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Title</label>
-                          <input
-                            type="text"
-                            value={proj.title}
-                            onChange={(e) => {
-                              updateProject(proj.id, { title: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-sm font-bold bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Subtitle</label>
-                          <input
-                            type="text"
-                            value={proj.subtitle}
-                            onChange={(e) => {
-                              updateProject(proj.id, { subtitle: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Category</label>
-                          <select
-                            value={proj.category}
-                            onChange={(e) => {
-                              updateProject(proj.id, { category: e.target.value as Project['category'] });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                          >
-                            <option value="Fintech">Fintech</option>
-                            <option value="Creative & Audio">Creative &amp; Audio</option>
-                            <option value="Publishing & Tools">Publishing &amp; Tools</option>
-                            <option value="Design Systems">Design Systems</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          deleteProject(proj.id);
-                          triggerToast();
-                        }}
-                        className="p-2 text-zinc-400 hover:text-rose-500"
-                        title="Delete Project"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Image URL / Path</label>
-                        <input
-                          type="text"
-                          value={proj.image}
-                          onChange={(e) => {
-                            updateProject(proj.id, { image: e.target.value });
-                            triggerToast();
-                          }}
-                          className="w-full px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Role / Year</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={proj.role}
-                            onChange={(e) => {
-                              updateProject(proj.id, { role: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-2/3 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                            placeholder="Role"
-                          />
-                          <input
-                            type="text"
-                            value={proj.year}
-                            onChange={(e) => {
-                              updateProject(proj.id, { year: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-1/3 px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                            placeholder="Year"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Summary</label>
-                      <textarea
-                        rows={2}
-                        value={proj.summary}
-                        onChange={(e) => {
-                          updateProject(proj.id, { summary: e.target.value });
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB 5: WORK EXPERIENCE */}
-        {/* ============================================================== */}
-        {activeTab === 'experience' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">Work Experiences ({data.experiences.length})</h2>
-                  <p className="text-xs text-zinc-500">Edit company names, roles, tenure, and achievements.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newExp: Experience = {
-                      id: 'exp-' + Date.now(),
-                      period: '2026 — Present',
-                      role: 'Senior Engineering Consultant',
-                      company: 'Global Studio Labs',
-                      location: 'Remote · London / Dhaka',
-                      type: 'Full-time',
-                      description: 'Directing frontend architecture and high-performance interactive systems.',
-                      achievements: [
-                        'Spearheaded modern component systems and achieved 60fps animations.',
-                      ],
-                      stack: ['React', 'TypeScript', 'Tailwind CSS'],
-                    };
-                    addExperience(newExp);
-                    triggerToast();
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-zinc-950 rounded-lg shadow-sm"
-                >
-                  <Plus size={15} />
-                  <span>Add Experience</span>
-                </button>
-              </div>
-
-              <div className="space-y-4 pt-2">
-                {data.experiences.map((exp) => (
-                  <div key={exp.id} className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Company</label>
-                          <input
-                            type="text"
-                            value={exp.company}
-                            onChange={(e) => {
-                              updateExperience(exp.id, { company: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-sm font-bold bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Role</label>
-                          <input
-                            type="text"
-                            value={exp.role}
-                            onChange={(e) => {
-                              updateExperience(exp.id, { role: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Period</label>
-                          <input
-                            type="text"
-                            value={exp.period}
-                            onChange={(e) => {
-                              updateExperience(exp.id, { period: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          deleteExperience(exp.id);
-                          triggerToast();
-                        }}
-                        className="p-2 text-zinc-400 hover:text-rose-500"
-                        title="Delete Experience"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Description</label>
-                      <textarea
-                        rows={2}
-                        value={exp.description}
-                        onChange={(e) => {
-                          updateExperience(exp.id, { description: e.target.value });
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB 6: EDUCATION & CERTS */}
-        {/* ============================================================== */}
-        {activeTab === 'education' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <h2 className="text-xl font-bold tracking-tight">Education &amp; Accreditations</h2>
-
-              {/* Degrees */}
-              {data.education.map((edu, idx) => (
-                <div key={edu.id} className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Degree Title</label>
-                      <input
-                        type="text"
-                        value={edu.degree}
-                        onChange={(e) => {
-                          const next = [...data.education];
-                          next[idx].degree = e.target.value;
-                          updateEducation(next);
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-sm font-bold bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Institution</label>
-                      <input
-                        type="text"
-                        value={edu.institution}
-                        onChange={(e) => {
-                          const next = [...data.education];
-                          next[idx].institution = e.target.value;
-                          updateEducation(next);
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-sm bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Period &amp; Location</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={edu.period}
-                          onChange={(e) => {
-                            const next = [...data.education];
-                            next[idx].period = e.target.value;
-                            updateEducation(next);
-                            triggerToast();
-                          }}
-                          className="w-1/2 px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                        />
-                        <input
-                          type="text"
-                          value={edu.location}
-                          onChange={(e) => {
-                            const next = [...data.education];
-                            next[idx].location = e.target.value;
-                            updateEducation(next);
-                            triggerToast();
-                          }}
-                          className="w-1/2 px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Honors / Distinction</label>
-                      <input
-                        type="text"
-                        value={edu.honors || ''}
-                        onChange={(e) => {
-                          const next = [...data.education];
-                          next[idx].honors = e.target.value;
-                          updateEducation(next);
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Certifications */}
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Certifications &amp; Accreditations</h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newCert: Certification = {
-                        name: 'New Certification Title',
-                        issuer: 'Accreditation Body',
-                        year: '2026',
-                        credentialId: 'ID-0000',
-                      };
-                      updateCertifications([...data.certifications, newCert]);
-                      triggerToast();
-                    }}
-                    className="inline-flex items-center gap-1 text-xs font-mono text-amber-500 hover:underline"
-                  >
-                    <Plus size={14} />
-                    <span>Add Certification</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {data.certifications.map((cert, idx) => (
-                    <div key={idx} className="p-3.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <input
-                          type="text"
-                          value={cert.name}
-                          onChange={(e) => {
-                            const next = [...data.certifications];
-                            next[idx].name = e.target.value;
-                            updateCertifications(next);
-                            triggerToast();
-                          }}
-                          className="w-3/4 px-2.5 py-1 text-xs font-bold bg-white dark:bg-zinc-900 border rounded"
-                        />
+          {/* ════ 11. SOCIAL MEDIA LINKS ════ */}
+          {activeSection === 'socials' && (
+            <div className="space-y-6">
+              <SectionCard title="Social & Professional Profiles" description="Links displayed in the hero section and footer colophon.">
+                <div className="space-y-2.5">
+                  {data.personalInfo.socials.map((social, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="flex flex-col gap-0.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => {
-                            updateCertifications(data.certifications.filter((_, i) => i !== idx));
-                            triggerToast();
+                            const reordered = reorder(data.personalInfo.socials, i, 'up');
+                            updatePersonalInfo({ socials: reordered });
                           }}
-                          className="p-1 text-zinc-400 hover:text-rose-500"
+                          disabled={i === 0}
+                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
                         >
-                          <Trash2 size={14} />
+                          <ArrowUp size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const reordered = reorder(data.personalInfo.socials, i, 'down');
+                            updatePersonalInfo({ socials: reordered });
+                          }}
+                          disabled={i === data.personalInfo.socials.length - 1}
+                          className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+                        >
+                          <ArrowDown size={11} />
                         </button>
                       </div>
-                      <div className="flex gap-2 text-xs">
-                        <input
-                          type="text"
-                          value={cert.issuer}
-                          onChange={(e) => {
-                            const next = [...data.certifications];
-                            next[idx].issuer = e.target.value;
-                            updateCertifications(next);
-                            triggerToast();
-                          }}
-                          className="w-2/3 px-2 py-1 bg-white dark:bg-zinc-900 border rounded text-[11px]"
-                          placeholder="Issuer"
-                        />
-                        <input
-                          type="text"
-                          value={cert.year}
-                          onChange={(e) => {
-                            const next = [...data.certifications];
-                            next[idx].year = e.target.value;
-                            updateCertifications(next);
-                            triggerToast();
-                          }}
-                          className="w-1/3 px-2 py-1 font-mono text-[11px] bg-white dark:bg-zinc-900 border rounded text-amber-500"
-                          placeholder="Year"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================== */}
-        {/* TAB 7: BLOG POSTS (ADD & EDIT & DELETE) */}
-        {/* ============================================================== */}
-        {activeTab === 'blog' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold tracking-tight">Articles &amp; Essays ({data.blogPosts.length})</h2>
-                  <p className="text-xs text-zinc-500">Publish new technical essays, edit existing content, or delete.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newPost: BlogPost = {
-                      id: 'post-' + Date.now(),
-                      title: 'New Engineering Essay',
-                      slug: 'new-essay',
-                      date: 'March 2026',
-                      readTime: '4 min read',
-                      category: 'Architecture',
-                      excerpt: 'A short summary of your latest technical insight.',
-                      content: 'Detailed editorial writeup with code snippets and architecture diagrams.',
-                    };
-                    addBlogPost(newPost);
-                    triggerToast();
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-300 text-zinc-950 rounded-lg shadow-sm"
-                >
-                  <Plus size={15} />
-                  <span>Create Essay</span>
-                </button>
-              </div>
-
-              <div className="space-y-4 pt-2">
-                {data.blogPosts.map((post) => (
-                  <div key={post.id} className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="sm:col-span-2">
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Title</label>
-                          <input
-                            type="text"
-                            value={post.title}
-                            onChange={(e) => {
-                              updateBlogPost(post.id, { title: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-sm font-bold bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Category</label>
-                          <input
-                            type="text"
-                            value={post.category}
-                            onChange={(e) => {
-                              updateBlogPost(post.id, { category: e.target.value });
-                              triggerToast();
-                            }}
-                            className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                          />
-                        </div>
-                      </div>
-
+                      <input
+                        type="text"
+                        className={inputCls + ' w-36 shrink-0 font-medium'}
+                        placeholder="Platform Name"
+                        value={social.name}
+                        onChange={(e) => {
+                          const s = [...data.personalInfo.socials];
+                          s[i] = { ...s[i], name: e.target.value };
+                          updatePersonalInfo({ socials: s });
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className={inputCls + ' flex-1 font-mono text-xs'}
+                        placeholder="https://..."
+                        value={social.url}
+                        onChange={(e) => {
+                          const s = [...data.personalInfo.socials];
+                          s[i] = { ...s[i], url: e.target.value };
+                          updatePersonalInfo({ socials: s });
+                        }}
+                      />
+                      {social.url && (
+                        <a
+                          href={social.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-2 text-zinc-400 hover:text-yellow-400 shrink-0"
+                          title="Open link"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
                       <button
                         type="button"
-                        onClick={() => {
-                          deleteBlogPost(post.id);
-                          triggerToast();
-                        }}
-                        className="p-2 text-zinc-400 hover:text-rose-500"
-                        title="Delete Post"
+                        onClick={() => updatePersonalInfo({ socials: data.personalInfo.socials.filter((_, j) => j !== i) })}
+                        className="p-2 text-zinc-400 hover:text-red-500 shrink-0"
+                        title="Remove link"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => updatePersonalInfo({ socials: [...data.personalInfo.socials, { name: 'GitHub', url: 'https://github.com/' }] })}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-2"
+                  >
+                    <Plus size={14} /> Add Social Profile
+                  </button>
+                </div>
+              </SectionCard>
+            </div>
+          )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Date</label>
-                        <input
-                          type="text"
-                          value={post.date}
-                          onChange={(e) => {
-                            updateBlogPost(post.id, { date: e.target.value });
-                            triggerToast();
-                          }}
-                          className="w-full px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Read Time</label>
-                        <input
-                          type="text"
-                          value={post.readTime}
-                          onChange={(e) => {
-                            updateBlogPost(post.id, { readTime: e.target.value });
-                            triggerToast();
-                          }}
-                          className="w-full px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Excerpt</label>
-                      <textarea
-                        rows={2}
-                        value={post.excerpt}
-                        onChange={(e) => {
-                          updateBlogPost(post.id, { excerpt: e.target.value });
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-mono uppercase text-zinc-500 block mb-1">Full Content (Markdown format)</label>
-                      <textarea
-                        rows={4}
-                        value={post.content}
-                        onChange={(e) => {
-                          updateBlogPost(post.id, { content: e.target.value });
-                          triggerToast();
-                        }}
-                        className="w-full px-3 py-1.5 text-xs font-mono bg-white dark:bg-zinc-900 border rounded"
-                      />
-                    </div>
+          {/* ════ 12. RESUME / CV MANAGEMENT ════ */}
+          {activeSection === 'resume' && (
+            <div className="space-y-6">
+              <SectionCard title="Resume & Curriculum Vitae" description="Manage your downloadable resume link or upload a CV document.">
+                <Field label="Resume Link or Hosted Document URL">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className={inputCls + ' font-mono text-xs'}
+                      placeholder="https://drive.google.com/... or upload below"
+                      value={(data.personalInfo as any).resumeUrl || ''}
+                      onChange={(e) => updatePersonalInfo({ resumeUrl: e.target.value } as any)}
+                    />
+                    {(data.personalInfo as any).resumeUrl && (
+                      <a
+                        href={(data.personalInfo as any).resumeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 px-3 py-2 text-xs font-medium bg-zinc-100 dark:bg-zinc-800 rounded-lg hover:bg-zinc-200 shrink-0"
+                      >
+                        <ExternalLink size={13} /> Test
+                      </a>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+                </Field>
 
-        {/* ============================================================== */}
-        {/* TAB 8: DATA & RESET */}
-        {/* ============================================================== */}
-        {activeTab === 'data' && (
-          <div className="space-y-8 animate-in fade-in duration-150">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
-              <h2 className="text-xl font-bold tracking-tight">Data Management &amp; System Reset</h2>
-              <p className="text-sm text-zinc-500">
-                All modifications are automatically saved locally in your browser storage. You can backup your data or reset to defaults at any time.
-              </p>
-
-              <div className="p-5 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/20 space-y-3">
-                <h3 className="text-sm font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
-                  <RotateCcw size={16} />
-                  <span>Factory Reset</span>
-                </h3>
-                <p className="text-xs text-rose-600 dark:text-rose-300">
-                  Restore all content, skills, projects, and bio back to the default editorial state.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to restore all portfolio data to defaults?')) {
-                      resetToDefaults();
-                      triggerToast();
-                    }
-                  }}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-colors"
-                >
-                  Reset Everything to Defaults
-                </button>
-              </div>
+                <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                  <p className={labelCls}>Or Upload File from Computer</p>
+                  <label className="inline-flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-yellow-400 bg-white dark:bg-zinc-900 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:text-yellow-500 transition-colors">
+                    <Upload size={14} />
+                    Choose Resume PDF / Document
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, (b64) => updatePersonalInfo({ resumeUrl: b64 } as any))}
+                    />
+                  </label>
+                  {(data.personalInfo as any).resumeUrl && (
+                    <p className="mt-2 text-xs text-emerald-500 font-mono flex items-center gap-1">
+                      <Check size={12} /> Resume file linked successfully
+                    </p>
+                  )}
+                </div>
+              </SectionCard>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ════ 13. THEME & APPEARANCE ════ */}
+          {activeSection === 'theme' && (
+            <div className="space-y-6">
+              <SectionCard title="Visual Theme & Accent System" description="Control light/dark modes and accent styling.">
+                <div className="flex items-center justify-between p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                  <div>
+                    <p className="text-sm font-semibold">Active Color Theme</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Toggle between dark mode and light mode across the site.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    {darkMode ? <Moon size={14} className="text-yellow-400" /> : <Sun size={14} className="text-amber-500" />}
+                    {darkMode ? 'Dark Theme' : 'Light Theme'}
+                  </button>
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ════ 14. GENERAL SETTINGS & ADMIN PASSWORD ════ */}
+          {activeSection === 'settings' && (
+            <div className="max-w-2xl space-y-6">
+              <SectionCard title="Admin Password & Authentication" description="Change your admin dashboard access password.">
+                <form onSubmit={handleChangePassword} className="space-y-3.5">
+                  <Field label="Current Password">
+                    <div className="relative">
+                      <input
+                        type={showPw ? 'text' : 'password'}
+                        className={inputCls + ' pr-10'}
+                        value={pwCurrent}
+                        onChange={(e) => setPwCurrent(e.target.value)}
+                        placeholder="Current password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw(!showPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      >
+                        {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </Field>
+
+                  <Field label="New Password (minimum 8 characters)">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      className={inputCls}
+                      value={pwNew}
+                      onChange={(e) => setPwNew(e.target.value)}
+                      placeholder="New strong password"
+                      required
+                    />
+                  </Field>
+
+                  <Field label="Confirm New Password">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      className={inputCls}
+                      value={pwConfirm}
+                      onChange={(e) => setPwConfirm(e.target.value)}
+                      placeholder="Repeat new password"
+                      required
+                    />
+                  </Field>
+
+                  {pwError && (
+                    <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/30 border border-red-800/30 px-3 py-2 rounded-lg">
+                      <AlertCircle size={14} /> {pwError}
+                    </div>
+                  )}
+
+                  {pwSuccess && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-800/30 px-3 py-2 rounded-lg">
+                      <Check size={14} /> {pwSuccess}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={pwLoading}
+                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-zinc-950 rounded-lg transition-colors"
+                  >
+                    {pwLoading ? <><Loader2 size={13} className="animate-spin" /> Updating...</> : 'Update Admin Password'}
+                  </button>
+                </form>
+              </SectionCard>
+
+              <SectionCard title="Danger Zone">
+                <div className="p-4 rounded-xl border border-red-200 dark:border-red-950 bg-red-50 dark:bg-red-950/20 space-y-3">
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Reset Portfolio Content</p>
+                  <p className="text-xs text-red-500 dark:text-red-300">
+                    Restores all projects, blogs, skills, and bio back to the default portfolio state. This cannot be undone.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to restore all portfolio data to defaults?')) {
+                        resetToDefaults();
+                      }
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+                  >
+                    Reset Everything to Defaults
+                  </button>
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+        </main>
       </div>
     </div>
   );
 };
+
+// ── Shared UI Sub-components ──
+
+function SectionCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xs">
+      <div>
+        <h3 className="text-base font-bold text-zinc-900 dark:text-white">{title}</h3>
+        {description && <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{description}</p>}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <label className={labelCls}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function AddSkillForm({ onAdd }: { onAdd: (s: Omit<TechSkillItem, 'id'>) => void }) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('Frontend');
+  const [iconName, setIconName] = useState('Code2');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onAdd({ name: name.trim(), category, iconName });
+    setName('');
+  };
+
+  return (
+    <form onSubmit={submit} className="flex gap-2 items-end flex-wrap border-t border-zinc-100 dark:border-zinc-800 pt-3">
+      <div className="flex-1 min-w-32">
+        <label className={labelCls}>New Skill Name</label>
+        <input type="text" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="React 19" required />
+      </div>
+      <div className="w-32">
+        <label className={labelCls}>Category</label>
+        <input type="text" className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)} />
+      </div>
+      <div className="w-32">
+        <label className={labelCls}>Icon</label>
+        <select className={inputCls} value={iconName} onChange={(e) => setIconName(e.target.value)}>
+          {AVAILABLE_ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </div>
+      <button type="submit" className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg">
+        <Plus size={14} /> Add Skill
+      </button>
+    </form>
+  );
+}
+
+function ExperienceCard({
+  exp, index, total, onMove, onUpdate, onDelete
+}: {
+  exp: Experience;
+  index: number;
+  total: number;
+  onMove: (dir: 'up' | 'down') => void;
+  onUpdate: (u: Partial<Experience>) => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+      <div className="flex items-center justify-between p-4 cursor-pointer select-none" onClick={() => setOpen(!open)}>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => onMove('up')}
+              disabled={index === 0}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowUp size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove('down')}
+              disabled={index === total - 1}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowDown size={11} />
+            </button>
+          </div>
+          <div>
+            <p className="font-bold text-sm">{exp.role || 'Role Title'}</p>
+            <p className="text-xs text-zinc-500">{exp.company} · {exp.period}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1.5 text-zinc-400 hover:text-red-500 rounded-md"
+            title="Delete role"
+          >
+            <Trash2 size={14} />
+          </button>
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+
+      {open && (
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 space-y-3 bg-zinc-50/50 dark:bg-zinc-950/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Company"><input type="text" className={inputCls} value={exp.company} onChange={(e) => onUpdate({ company: e.target.value })} /></Field>
+            <Field label="Role Title"><input type="text" className={inputCls} value={exp.role} onChange={(e) => onUpdate({ role: e.target.value })} /></Field>
+            <Field label="Period (e.g. 2024–Present)"><input type="text" className={inputCls} value={exp.period} onChange={(e) => onUpdate({ period: e.target.value })} /></Field>
+            <Field label="Location"><input type="text" className={inputCls} value={exp.location} onChange={(e) => onUpdate({ location: e.target.value })} /></Field>
+          </div>
+          <Field label="Description">
+            <textarea rows={3} className={inputCls + ' resize-none'} value={exp.description} onChange={(e) => onUpdate({ description: e.target.value })} />
+          </Field>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectCard({
+  proj, index, total, onMove, onUpdate, onDelete, onFileUpload
+}: {
+  proj: Project;
+  index: number;
+  total: number;
+  onMove: (dir: 'up' | 'down') => void;
+  onUpdate: (u: Partial<Project>) => void;
+  onDelete: () => void;
+  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, cb: (b64: string) => void) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+      <div className="flex items-center justify-between p-4 cursor-pointer select-none" onClick={() => setOpen(!open)}>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => onMove('up')}
+              disabled={index === 0}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowUp size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove('down')}
+              disabled={index === total - 1}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowDown size={11} />
+            </button>
+          </div>
+          {proj.image ? (
+            <img src={proj.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-zinc-200 dark:bg-zinc-800" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 text-xs">
+              🖼️
+            </div>
+          )}
+          <div>
+            <p className="font-bold text-sm">{proj.title || 'Untitled Project'}</p>
+            <p className="text-xs text-zinc-500">{proj.category} · {proj.year}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1.5 text-zinc-400 hover:text-red-500 rounded-md"
+            title="Delete project"
+          >
+            <Trash2 size={14} />
+          </button>
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+
+      {open && (
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 space-y-3 bg-zinc-50/50 dark:bg-zinc-950/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Project Title"><input type="text" className={inputCls} value={proj.title} onChange={(e) => onUpdate({ title: e.target.value })} /></Field>
+            <Field label="Subtitle / Tagline"><input type="text" className={inputCls} value={proj.subtitle} onChange={(e) => onUpdate({ subtitle: e.target.value })} /></Field>
+            <Field label="Category"><input type="text" className={inputCls} value={proj.category} onChange={(e) => onUpdate({ category: e.target.value })} /></Field>
+            <Field label="Year"><input type="text" className={inputCls} value={proj.year} onChange={(e) => onUpdate({ year: e.target.value })} /></Field>
+            <Field label="Role Title"><input type="text" className={inputCls} value={proj.role} onChange={(e) => onUpdate({ role: e.target.value })} /></Field>
+            <Field label="Live Demo URL"><input type="text" className={inputCls + ' font-mono text-xs'} value={proj.liveUrl || ''} onChange={(e) => onUpdate({ liveUrl: e.target.value })} placeholder="https://..." /></Field>
+          </div>
+
+          <Field label="Project Cover Image">
+            <div className="flex gap-2">
+              <input type="text" className={inputCls + ' font-mono text-xs'} value={proj.image} onChange={(e) => onUpdate({ image: e.target.value })} placeholder="Image URL..." />
+              <label className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg cursor-pointer shrink-0">
+                <Upload size={12} /> Upload
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onFileUpload(e, (b64) => onUpdate({ image: b64 }))} />
+              </label>
+            </div>
+          </Field>
+
+          <Field label="Project Summary">
+            <textarea rows={2} className={inputCls + ' resize-none'} value={proj.summary} onChange={(e) => onUpdate({ summary: e.target.value })} />
+          </Field>
+
+          <Field label="Technologies (comma-separated)">
+            <input
+              type="text"
+              className={inputCls}
+              value={proj.technologies.join(', ')}
+              onChange={(e) => onUpdate({ technologies: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })}
+            />
+          </Field>
+
+          <label className="flex items-center gap-2 text-xs font-medium cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={proj.featured}
+              onChange={(e) => onUpdate({ featured: e.target.checked })}
+              className="w-4 h-4 accent-yellow-400 rounded"
+            />
+            Feature this project prominently on the homepage
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlogCard({
+  post, index, total, onMove, onUpdate, onDelete, onFileUpload
+}: {
+  post: BlogPost;
+  index: number;
+  total: number;
+  onMove: (dir: 'up' | 'down') => void;
+  onUpdate: (u: Partial<BlogPost>) => void;
+  onDelete: () => void;
+  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, cb: (b64: string) => void) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+      <div className="flex items-center justify-between p-4 cursor-pointer select-none" onClick={() => setOpen(!open)}>
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => onMove('up')}
+              disabled={index === 0}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowUp size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove('down')}
+              disabled={index === total - 1}
+              className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+            >
+              <ArrowDown size={11} />
+            </button>
+          </div>
+          <div>
+            <p className="font-bold text-sm">{post.title}</p>
+            <p className="text-xs text-zinc-500">{post.category} · {post.date} · {post.readTime}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1.5 text-zinc-400 hover:text-red-500 rounded-md"
+            title="Delete post"
+          >
+            <Trash2 size={14} />
+          </button>
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+
+      {open && (
+        <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 space-y-3 bg-zinc-50/50 dark:bg-zinc-950/30">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Article Title"><input type="text" className={inputCls} value={post.title} onChange={(e) => onUpdate({ title: e.target.value })} /></Field>
+            <Field label="Category"><input type="text" className={inputCls} value={post.category} onChange={(e) => onUpdate({ category: e.target.value })} /></Field>
+            <Field label="Publish Date"><input type="text" className={inputCls} value={post.date} onChange={(e) => onUpdate({ date: e.target.value })} /></Field>
+            <Field label="Read Time"><input type="text" className={inputCls} value={post.readTime} onChange={(e) => onUpdate({ readTime: e.target.value })} /></Field>
+          </div>
+
+          <Field label="Cover Image">
+            <div className="flex gap-2">
+              <input type="text" className={inputCls + ' font-mono text-xs'} value={post.image || ''} placeholder="Cover image URL..." onChange={(e) => onUpdate({ image: e.target.value })} />
+              <label className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg cursor-pointer shrink-0">
+                <Upload size={12} /> Upload
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onFileUpload(e, (b64) => onUpdate({ image: b64 }))} />
+              </label>
+            </div>
+          </Field>
+
+          <Field label="Excerpt">
+            <textarea rows={2} className={inputCls + ' resize-none'} value={post.excerpt} onChange={(e) => onUpdate({ excerpt: e.target.value })} />
+          </Field>
+
+          <Field label="Full Markdown Content">
+            <textarea rows={6} className={inputCls + ' resize-none font-mono text-xs'} value={post.content} onChange={(e) => onUpdate({ content: e.target.value })} />
+          </Field>
+        </div>
+      )}
+    </div>
+  );
+}

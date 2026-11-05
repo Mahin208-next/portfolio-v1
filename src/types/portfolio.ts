@@ -2,7 +2,7 @@ export interface Project {
   id: string;
   title: string;
   subtitle: string;
-  category: 'Fintech' | 'Creative & Audio' | 'Publishing & Tools' | 'Design Systems';
+  category: string; // widened to string so admin can type any category
   year: string;
   role: string;
   image: string;
@@ -66,4 +66,6 @@ export interface BlogPost {
   excerpt: string;
   content: string;
   image?: string;
+  featured?: boolean;
 }
+

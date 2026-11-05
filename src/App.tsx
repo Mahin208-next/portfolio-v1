@@ -19,37 +19,44 @@ import { Blog } from './components/Blog';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { AdminLogin } from './components/admin/AdminLogin';
+import { checkAuth } from './hooks/useApi';
 
 function MainApp() {
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const { currentPath } = useCurrentPath();
 
-  // Initialize Lenis smooth scroll for butter-smooth inertia scrolling
+  // Admin auth state
+  const [isAdminAuth, setIsAdminAuth] = useState<boolean | null>(null); // null = checking
+
   useEffect(() => {
     const lenis = initSmoothScroll();
-    return () => {
-      destroySmoothScroll();
-    };
+    return () => { destroySmoothScroll(); };
   }, []);
 
   useEffect(() => {
     const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
+    darkMode ? root.classList.add('dark') : root.classList.remove('dark');
   }, [darkMode]);
 
-  // Scroll to section when visiting clean paths like /skills, /about, /projects
+  // When navigating to /admin, verify authentication
+  useEffect(() => {
+    if (currentPath === '/admin') {
+      checkAuth().then((authenticated) => {
+        setIsAdminAuth(authenticated);
+      });
+    } else {
+      setIsAdminAuth(null);
+    }
+  }, [currentPath]);
+
+  // Scroll to section on path change
   useEffect(() => {
     if (currentPath && currentPath !== '/' && currentPath !== '/home' && currentPath !== '/admin') {
       const sectionId = currentPath.replace('/', '');
       const timer = setTimeout(() => {
         const el = document.getElementById(sectionId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 150);
       return () => clearTimeout(timer);
     } else if (currentPath === '/' || currentPath === '/home') {
@@ -57,64 +64,57 @@ function MainApp() {
     }
   }, [currentPath]);
 
-  // When visiting /admin
+  // ── Admin route ──
   if (currentPath === '/admin') {
+    // Still checking auth
+    if (isAdminAuth === null) {
+      return (
+        <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
+
+    // Not authenticated → show login
+    if (!isAdminAuth) {
+      return (
+        <AdminLogin onAuthenticated={() => setIsAdminAuth(true)} />
+      );
+    }
+
+    // Authenticated → show admin panel
     return (
-      <BeamsBackground
-        darkMode={darkMode}
-        className={`min-h-screen ${darkMode ? 'text-zinc-100' : 'text-zinc-900'}`}
-      >
+      <div className={darkMode ? 'dark' : ''}>
         <AdminPanel
           onBackToSite={() => navigateTo('/')}
+          onLogout={() => { setIsAdminAuth(false); }}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
         />
-      </BeamsBackground>
+      </div>
     );
   }
 
+  // ── Main portfolio ──
   return (
     <BeamsBackground
       darkMode={darkMode}
-      className={`min-h-screen font-sans selection:bg-amber-400 selection:text-zinc-950 transition-colors duration-300 ${
+      className={`min-h-screen font-sans selection:bg-yellow-400 selection:text-zinc-950 transition-colors duration-300 ${
         darkMode ? 'text-zinc-100' : 'text-zinc-900'
       }`}
     >
       <div className="relative z-10">
-        {/* Top Bar Navigation */}
-        <Header
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-        />
-
-        {/* Main Portfolio Sections */}
+        <Header darkMode={darkMode} setDarkMode={setDarkMode} />
         <main>
-          {/* Kinetic Hero */}
           <Hero />
-
-          {/* 01. About Me */}
           <About />
-
-          {/* 02. Skills Matrix */}
           <Skills />
-
-          {/* 03. Work Experiences */}
           <Experience />
-
-          {/* 04. Projects */}
           <Projects />
-
-          {/* 05. Education */}
           <Education />
-
-          {/* 06. Blog */}
           <Blog />
-
-          {/* 07. Contact */}
           <Contact />
         </main>
-
-        {/* Footer Colophon with Admin Link */}
         <Footer />
       </div>
     </BeamsBackground>

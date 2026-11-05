@@ -1,54 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Menu, X, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Moon, Sun, Menu, X } from 'lucide-react';
 import { navigateTo, useCurrentPath } from '../utils/router';
-import { SearchModal } from './SearchModal';
+import { usePortfolio } from '../context/PortfolioContext';
 
 interface HeaderProps {
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({
-  darkMode,
-  setDarkMode,
-}) => {
+export const Header: React.FC<HeaderProps> = ({ darkMode, setDarkMode }) => {
   const { currentPath } = useCurrentPath();
+  const { data } = usePortfolio();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeIndicator, setActiveIndicator] = useState({ left: 0, width: 0 });
+  const navRef = useRef<HTMLDivElement>(null);
+  const activeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Global keyboard shortcut to open search modal (Press / or Cmd+K)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
-        return;
-      }
-      if (e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   const navLinks = [
-    { label: '/home', path: '/home' },
-    { label: '/about', path: '/about' },
-    { label: '/skills', path: '/skills' },
-    { label: '/experience', path: '/experience' },
-    { label: '/projects', path: '/projects' },
-    { label: '/education', path: '/education' },
-    { label: '/blog', path: '/blog' },
-    { label: '/contact', path: '/contact' },
+    { label: 'Home',       path: '/home' },
+    { label: 'About',      path: '/about' },
+    { label: 'Skills',     path: '/skills' },
+    { label: 'Experience', path: '/experience' },
+    { label: 'Projects',   path: '/projects' },
+    { label: 'Education',  path: '/education' },
+    { label: 'Blog',       path: '/blog' },
+    { label: 'Contact',    path: '/contact' },
   ];
 
   const handleNav = (path: string) => {
@@ -56,152 +39,181 @@ export const Header: React.FC<HeaderProps> = ({
     navigateTo(path);
   };
 
+  const isActive = (path: string) =>
+    currentPath === path || (path === '/home' && (currentPath === '/' || currentPath === ''));
+
+  // Update sliding indicator position
+  useEffect(() => {
+    if (activeButtonRef.current && navRef.current) {
+      const navRect = navRef.current.getBoundingClientRect();
+      const btnRect = activeButtonRef.current.getBoundingClientRect();
+      setActiveIndicator({
+        left: btnRect.left - navRect.left,
+        width: btnRect.width,
+      });
+    }
+  }, [currentPath]);
+
+  // Extract dynamic logo & branding from admin-editable personalInfo
+  const logoText = data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan';
+  const logoImage = data.personalInfo.logoImage || '';
+  const logoType = data.personalInfo.logoType || 'text';
+  const logoFontSize = data.personalInfo.logoFontSize || 'text-xl';
+  const logoFirst = logoText.charAt(0);
+  const logoRest = logoText.slice(1);
+
   return (
     <>
       <header
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out ${
           scrolled
-            ? 'bg-white/85 dark:bg-zinc-950/85 backdrop-blur-md border-b border-zinc-200/80 dark:border-zinc-800/80 shadow-sm'
-            : 'bg-transparent border-b border-transparent backdrop-blur-none'
+            ? 'bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-200/60 dark:border-zinc-800/60 shadow-[0_1px_20px_rgba(0,0,0,0.04)]'
+            : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-3 sm:gap-6">
-          {/* Brand Logo: M. Hasan (M is yellow) */}
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[68px] flex items-center justify-between gap-6">
+
+          {/* ── Logo / Website Branding ── */}
           <button
             type="button"
             onClick={() => handleNav('/home')}
-            className="text-xl sm:text-2xl font-bold tracking-tight whitespace-nowrap shrink-0 hover:opacity-85 transition-opacity flex items-center focus:outline-none font-mono"
+            className="shrink-0 flex items-center gap-2.5 focus:outline-none group"
+            aria-label="Go to home"
           >
-            <span className="text-yellow-400 font-extrabold">M</span>
-            <span className="text-zinc-900 dark:text-white">. Hasan</span>
+            {(logoType === 'image' || logoType === 'both') && logoImage && (
+              <img
+                src={logoImage}
+                alt={logoText}
+                className="h-8 w-8 rounded-lg object-cover ring-1 ring-zinc-200 dark:ring-zinc-800"
+              />
+            )}
+            {(logoType === 'text' || logoType === 'both' || !logoImage) && (
+              <div className={`font-bold tracking-tight font-mono leading-none ${logoFontSize}`}>
+                <span className="font-extrabold text-yellow-400 group-hover:text-yellow-300 transition-colors">
+                  {logoFirst}
+                </span>
+                <span className="text-zinc-900 dark:text-white group-hover:opacity-80 transition-opacity">
+                  {logoRest}
+                </span>
+              </div>
+            )}
           </button>
 
-          {/* Clean nav links with / prefix */}
-          <nav className="hidden lg:flex items-center gap-4 xl:gap-6 text-xs xl:text-sm font-mono font-medium">
+          {/* ── Desktop Nav ── */}
+          <nav
+            ref={navRef}
+            className="hidden lg:flex items-center relative"
+            role="navigation"
+            aria-label="Main navigation"
+          >
+            {/* Sliding background pill */}
+            <span
+              className="absolute top-1/2 -translate-y-1/2 h-7 rounded-md bg-zinc-100 dark:bg-zinc-800/80 transition-all duration-300 ease-out pointer-events-none"
+              style={{ left: activeIndicator.left, width: activeIndicator.width }}
+            />
+
             {navLinks.map((link) => {
-              const isActive =
-                currentPath === link.path ||
-                (link.path === '/home' && (currentPath === '/' || currentPath === ''));
+              const active = isActive(link.path);
               return (
                 <button
                   key={link.path}
+                  ref={active ? activeButtonRef : null}
                   type="button"
                   onClick={() => handleNav(link.path)}
-                  className={`py-1 transition-colors duration-200 whitespace-nowrap shrink-0 relative focus:outline-none ${
-                    isActive
-                      ? 'text-yellow-400 font-bold'
-                      : 'text-zinc-600 dark:text-zinc-300 hover:text-yellow-400 dark:hover:text-yellow-400'
+                  className={`relative z-10 px-3.5 py-1.5 text-[13px] font-medium tracking-tight rounded-md whitespace-nowrap transition-colors duration-200 focus:outline-none ${
+                    active
+                      ? 'text-zinc-900 dark:text-white font-semibold'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'
                   }`}
                 >
                   {link.label}
+                  {/* Active underline dot */}
+                  {active && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-yellow-400" />
+                  )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Controls: Search, Theme Toggle, Primary Action, Mobile Hamburger */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Quick Search Bar Trigger (Type /admin in search) */}
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              title="Search or type /admin (Press / or ⌘K)"
-              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-mono text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 hover:border-yellow-400/50 transition-colors"
-            >
-              <Search size={14} className="text-yellow-500" />
-              <span className="hidden xl:inline">Type /admin or search...</span>
-              <span className="hidden sm:inline xl:hidden">Search</span>
-              <kbd className="hidden sm:inline text-[10px] bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400">
-                /
-              </kbd>
-            </button>
-
+          {/* ── Right Controls ── */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Theme Toggle */}
             <button
               type="button"
               onClick={() => setDarkMode(!darkMode)}
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               aria-label="Toggle color theme"
-              className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors duration-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+              className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-all duration-200"
             >
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              {darkMode ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
             </button>
 
-            {/* CTA */}
+            {/* CTA Button */}
             <button
               type="button"
               onClick={() => handleNav('/contact')}
-              className="hidden sm:inline-flex items-center justify-center px-3.5 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold tracking-wide uppercase text-zinc-950 bg-yellow-400 hover:bg-yellow-300 rounded-md transition-colors duration-200 whitespace-nowrap shrink-0 shadow-sm font-mono"
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-[13px] font-semibold text-zinc-950 bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 rounded-lg shadow-sm transition-all duration-200 whitespace-nowrap"
             >
-              Get in Touch
+              Hire Me
             </button>
 
-            {/* Mobile menu button */}
+            {/* Mobile Menu Toggle */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle navigation menu"
-              className="lg:hidden p-2 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white rounded-md transition-colors duration-200"
+              className="lg:hidden p-2 text-zinc-600 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
             >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Drawer */}
+        {/* ── Mobile Drawer ── */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-6 py-5 shadow-2xl animate-in slide-in-from-top-4 duration-200 space-y-3">
-            {/* Mobile Search Bar */}
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setSearchOpen(true);
-              }}
-              className="w-full text-left py-2.5 px-3.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 font-mono text-xs flex items-center justify-between border border-zinc-200 dark:border-zinc-800"
-            >
-              <span className="flex items-center gap-2">
-                <Search size={14} className="text-yellow-500" />
-                <span>Type /admin or search...</span>
-              </span>
-              <span className="text-[10px] font-bold text-yellow-500 uppercase">Search</span>
-            </button>
-
-            <nav className="flex flex-col gap-1.5 text-sm sm:text-base font-mono font-medium text-zinc-700 dark:text-zinc-300">
+          <div className="lg:hidden bg-white/97 dark:bg-zinc-950/97 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-5 py-4 shadow-xl animate-in slide-in-from-top-2 duration-200">
+            <nav className="flex flex-col gap-0.5" role="navigation">
               {navLinks.map((link) => {
-                const isActive =
-                  currentPath === link.path ||
-                  (link.path === '/home' && (currentPath === '/' || currentPath === ''));
+                const active = isActive(link.path);
                 return (
                   <button
                     key={link.path}
                     type="button"
                     onClick={() => handleNav(link.path)}
-                    className={`text-left py-2 border-b border-zinc-100 dark:border-zinc-900 transition-colors duration-200 flex items-center justify-between ${
-                      isActive
-                        ? 'text-yellow-400 font-bold'
-                        : 'hover:text-yellow-400'
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between transition-colors duration-150 ${
+                      active
+                        ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white font-semibold'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 hover:text-zinc-900 dark:hover:text-white'
                     }`}
                   >
                     <span>{link.label}</span>
-                    {isActive && <span className="text-yellow-400 text-xs">●</span>}
+                    {active && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />}
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={() => handleNav('/contact')}
-                className="mt-2 text-center py-2.5 text-xs font-bold uppercase tracking-wider text-zinc-950 bg-yellow-400 hover:bg-yellow-300 rounded-md transition-colors duration-200"
-              >
-                Get in Touch
-              </button>
+
+              <div className="pt-3 mt-2 border-t border-zinc-100 dark:border-zinc-900 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); setDarkMode(!darkMode); }}
+                  className="flex-1 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+                  {darkMode ? 'Light Mode' : 'Dark Mode'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNav('/contact')}
+                  className="flex-1 py-2.5 text-sm font-semibold text-zinc-950 bg-yellow-400 hover:bg-yellow-300 rounded-lg transition-colors"
+                >
+                  Hire Me
+                </button>
+              </div>
             </nav>
           </div>
         )}
       </header>
-
-      {/* Global Interactive Search & Command Palette */}
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 };

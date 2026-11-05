@@ -14,6 +14,11 @@ export const PERSONAL_INFO = {
   availability: 'Open for Select Contracts & Senior Roles',
   timezone: 'Asia/Dhaka',
   heroPortrait: '/src/assets/images/hero_creative_portrait_1793815484427.jpg',
+  logoText: 'M. Hasan',
+  logoImage: '',
+  logoType: 'text' as 'text' | 'image' | 'both',
+  logoFontSize: 'text-xl' as 'text-lg' | 'text-xl' | 'text-2xl',
+  resumeUrl: '',
   stats: [
     { label: 'Years of Experience', value: '07+' },
     { label: 'Shipped Systems', value: '42' },

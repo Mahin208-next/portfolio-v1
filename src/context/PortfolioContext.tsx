@@ -14,6 +14,7 @@ import {
   CERTIFICATIONS as defaultCertifications,
   BLOG_POSTS as defaultBlogPosts,
 } from '../data/portfolioData';
+import { fetchPortfolioData } from '../hooks/useApi';
 
 export interface TechSkillItem {
   id: string;
@@ -134,6 +135,31 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     return defaultState;
   });
+
+  // On mount, try to fetch latest data from backend (overrides localStorage if DB has data)
+  useEffect(() => {
+    fetchPortfolioData().then((dbData) => {
+      if (!dbData) return; // No backend data yet — keep localStorage
+      try {
+        const merged: PortfolioDataState = {
+          personalInfo: (dbData.personal_info as typeof defaultPersonalInfo) ?? data.personalInfo,
+          pillars: (dbData.about as any)?.pillars ?? data.pillars,
+          aboutBio: (dbData.about as any)?.bio ?? data.aboutBio,
+          skills: (dbData.skills as any) ?? data.skills,
+          projects: (dbData.projects as any) ?? data.projects,
+          experiences: (dbData.experience as any) ?? data.experiences,
+          education: (dbData.education as any)?.items ?? data.education,
+          certifications: (dbData.education as any)?.certifications ?? data.certifications,
+          blogPosts: (dbData.blog_posts as any) ?? data.blogPosts,
+        };
+        setData(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch (e) {
+        console.error('Failed to merge DB data:', e);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const persist = (nextState: PortfolioDataState) => {
     setData(nextState);
