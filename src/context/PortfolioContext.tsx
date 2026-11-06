@@ -75,7 +75,7 @@ export interface PortfolioDataState {
   blogPosts: BlogPost[];
 }
 
-const STORAGE_KEY = 'm_hasan_portfolio_state_v3';
+const STORAGE_KEY = 'm_hasan_portfolio_state_v4';
 
 const defaultState: PortfolioDataState = {
   personalInfo: defaultPersonalInfo,

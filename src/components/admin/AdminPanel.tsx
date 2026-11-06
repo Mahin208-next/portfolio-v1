@@ -837,6 +837,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         }} />
                       </Field>
                     </div>
+                    <Field label="Honors / Awards (leave blank to hide)">
+                      <input type="text" className={inputCls} value={(edu as any).honors || ''} placeholder="Leave empty to hide this badge" onChange={(e) => {
+                        const d = [...data.education]; d[i] = { ...d[i], honors: e.target.value } as any; updateEducation(d);
+                      }} />
+                    </Field>
                     <Field label="Description">
                       <textarea rows={2} className={inputCls + ' resize-none'} value={edu.description || ''} onChange={(e) => {
                         const d = [...data.education]; d[i] = { ...d[i], description: e.target.value }; updateEducation(d);
