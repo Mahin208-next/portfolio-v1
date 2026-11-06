@@ -22,6 +22,8 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { AdminLogin } from './components/admin/AdminLogin';
 import { checkAuth } from './hooks/useApi';
 
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+
 function MainApp() {
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const { currentPath } = useCurrentPath();
@@ -123,8 +125,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <PortfolioProvider>
-      <MainApp />
-    </PortfolioProvider>
+    <ErrorBoundary>
+      <PortfolioProvider>
+        <MainApp />
+      </PortfolioProvider>
+    </ErrorBoundary>
   );
 }

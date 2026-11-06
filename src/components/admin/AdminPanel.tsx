@@ -560,94 +560,102 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </SectionCard>
 
               <SectionCard title="Info Card Items" description="The label/value pairs shown in the card on the right side of the About section (Location, Education, Focus, Email, etc). Toggle 'Email link' to make a row render as a clickable mailto link.">
-                <div className="space-y-3">
-                  {((data.personalInfo as any).aboutInfoItems ?? [
-                    { label: 'Location', value: (data.personalInfo as any).location || '', isEmail: false },
-                    { label: 'Education', value: 'B.Sc. in CSE (DIU)', isEmail: false },
-                    { label: 'Focus', value: 'Software Development & IoT', isEmail: false },
-                    { label: 'Direct Email', value: (data.personalInfo as any).email || '', isEmail: true },
-                  ]).map((item: { label: string; value: string; isEmail: boolean }, i: number) => {
-                    const items: { label: string; value: string; isEmail: boolean }[] =
-                      (data.personalInfo as any).aboutInfoItems ?? [];
-                    return (
-                      <div key={i} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-yellow-500">Row #{i + 1}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = items.filter((_, j) => j !== i);
-                              updatePersonalInfo({ aboutInfoItems: updated } as any);
-                            }}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
-                            title="Delete row"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Field label="Label">
-                            <input
-                              type="text"
-                              className={inputCls}
-                              value={item.label}
-                              placeholder="e.g. Location"
-                              onChange={(e) => {
-                                const updated = [...items];
-                                updated[i] = { ...updated[i], label: e.target.value };
-                                updatePersonalInfo({ aboutInfoItems: updated } as any);
+                {(() => {
+                  const rawItems = (data.personalInfo as any)?.aboutInfoItems;
+                  const currentItems: { label: string; value: string; isEmail: boolean }[] =
+                    Array.isArray(rawItems) && rawItems.length > 0
+                      ? rawItems.map((it) => ({
+                          label: it?.label || '',
+                          value: it?.value || '',
+                          isEmail: Boolean(it?.isEmail),
+                        }))
+                      : [
+                          { label: 'Location', value: data.personalInfo?.location || 'Dhaka, Bangladesh', isEmail: false },
+                          { label: 'Education', value: 'B.Sc. in CSE (DIU)', isEmail: false },
+                          { label: 'Focus', value: 'Software Development & IoT', isEmail: false },
+                          { label: 'Direct Email', value: data.personalInfo?.email || 'hasan241-15-127@diu.edu.bd', isEmail: true },
+                        ];
+
+                  const updateItems = (next: { label: string; value: string; isEmail: boolean }[]) => {
+                    updatePersonalInfo({ aboutInfoItems: next } as any);
+                  };
+
+                  return (
+                    <div className="space-y-3">
+                      {currentItems.map((item, i) => (
+                        <div key={i} className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-yellow-500">Row #{i + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateItems(currentItems.filter((_, j) => j !== i));
                               }}
-                            />
-                          </Field>
-                          <Field label="Value">
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
+                              title="Delete row"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Field label="Label">
+                              <input
+                                type="text"
+                                className={inputCls}
+                                value={item.label}
+                                placeholder="e.g. Location"
+                                onChange={(e) => {
+                                  const updated = [...currentItems];
+                                  updated[i] = { ...updated[i], label: e.target.value };
+                                  updateItems(updated);
+                                }}
+                              />
+                            </Field>
+                            <Field label="Value">
+                              <input
+                                type="text"
+                                className={inputCls}
+                                value={item.value}
+                                placeholder="e.g. Dhaka, Bangladesh"
+                                onChange={(e) => {
+                                  const updated = [...currentItems];
+                                  updated[i] = { ...updated[i], value: e.target.value };
+                                  updateItems(updated);
+                                }}
+                              />
+                            </Field>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
                             <input
-                              type="text"
-                              className={inputCls}
-                              value={item.value}
-                              placeholder="e.g. Dhaka, Bangladesh"
+                              type="checkbox"
+                              checked={item.isEmail}
                               onChange={(e) => {
-                                const updated = [...items];
-                                updated[i] = { ...updated[i], value: e.target.value };
-                                updatePersonalInfo({ aboutInfoItems: updated } as any);
+                                const updated = [...currentItems];
+                                updated[i] = { ...updated[i], isEmail: e.target.checked };
+                                updateItems(updated);
                               }}
+                              className="w-3.5 h-3.5 accent-yellow-400"
                             />
-                          </Field>
+                            <span className="text-xs text-zinc-500">Email link (renders as clickable mailto)</span>
+                          </label>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={!!item.isEmail}
-                            onChange={(e) => {
-                              const updated = [...items];
-                              updated[i] = { ...updated[i], isEmail: e.target.checked };
-                              updatePersonalInfo({ aboutInfoItems: updated } as any);
-                            }}
-                            className="w-3.5 h-3.5 accent-yellow-400"
-                          />
-                          <span className="text-xs text-zinc-500">Email link (renders as clickable mailto)</span>
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const existing: { label: string; value: string; isEmail: boolean }[] =
-                      (data.personalInfo as any).aboutInfoItems ?? [
-                        { label: 'Location', value: (data.personalInfo as any).location || '', isEmail: false },
-                        { label: 'Education', value: 'B.Sc. in CSE (DIU)', isEmail: false },
-                        { label: 'Focus', value: 'Software Development & IoT', isEmail: false },
-                        { label: 'Direct Email', value: (data.personalInfo as any).email || '', isEmail: true },
-                      ];
-                    updatePersonalInfo({
-                      aboutInfoItems: [...existing, { label: 'New Label', value: 'New Value', isEmail: false }],
-                    } as any);
-                  }}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-2"
-                >
-                  <Plus size={14} /> Add Info Row
-                </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateItems([
+                            ...currentItems,
+                            { label: 'New Label', value: 'New Value', isEmail: false },
+                          ]);
+                        }}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-2"
+                      >
+                        <Plus size={14} /> Add Info Row
+                      </button>
+                    </div>
+                  );
+                })()}
               </SectionCard>
 
               <SectionCard title="Bio Paragraphs" description="Add, edit, or remove paragraphs in your about section.">

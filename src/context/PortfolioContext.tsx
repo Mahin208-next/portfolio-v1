@@ -201,15 +201,35 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       try {
         const merged: PortfolioDataState = {
-          personalInfo: (dbData.personal_info as typeof defaultPersonalInfo) ?? data.personalInfo,
-          pillars: (dbData.about as any)?.pillars ?? data.pillars,
-          aboutBio: (dbData.about as any)?.bio ?? data.aboutBio,
-          skills: (dbData.skills as any) ?? data.skills,
-          projects: (dbData.projects as any) ?? data.projects,
-          experiences: (dbData.experience as any) ?? data.experiences,
-          education: (dbData.education as any)?.items ?? data.education,
-          certifications: (dbData.education as any)?.certifications ?? data.certifications,
-          blogPosts: (dbData.blog_posts as any) ?? data.blogPosts,
+          personalInfo: {
+            ...defaultPersonalInfo,
+            ...data.personalInfo,
+            ...((dbData.personal_info as any) || {}),
+          },
+          pillars: Array.isArray((dbData.about as any)?.pillars)
+            ? (dbData.about as any).pillars
+            : (data.pillars || DEFAULT_PILLARS),
+          aboutBio: Array.isArray((dbData.about as any)?.bio)
+            ? (dbData.about as any).bio
+            : (data.aboutBio || []),
+          skills: Array.isArray(dbData.skills)
+            ? dbData.skills
+            : (data.skills || DEFAULT_SKILLS),
+          projects: Array.isArray(dbData.projects)
+            ? dbData.projects
+            : (data.projects || defaultProjects),
+          experiences: Array.isArray(dbData.experience)
+            ? dbData.experience
+            : (data.experiences || defaultExperiences),
+          education: Array.isArray((dbData.education as any)?.items)
+            ? (dbData.education as any).items
+            : (data.education || defaultEducation),
+          certifications: Array.isArray((dbData.education as any)?.certifications)
+            ? (dbData.education as any).certifications
+            : (data.certifications || defaultCertifications),
+          blogPosts: Array.isArray(dbData.blog_posts)
+            ? dbData.blog_posts
+            : (data.blogPosts || defaultBlogPosts),
         };
         setData(merged);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
