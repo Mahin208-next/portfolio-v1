@@ -7,6 +7,15 @@ export const About: React.FC = () => {
   const { data } = usePortfolio();
   const { personalInfo, aboutBio, pillars } = data;
 
+  // Support both new dynamic items and legacy fallback
+  const infoItems: { label: string; value: string; isEmail?: boolean }[] =
+    (personalInfo as any).aboutInfoItems ?? [
+      { label: 'Location', value: personalInfo.location, isEmail: false },
+      { label: 'Education', value: 'B.Sc. in CSE (DIU)', isEmail: false },
+      { label: 'Focus', value: 'Design Systems & FinTech UI', isEmail: false },
+      { label: 'Direct Email', value: personalInfo.email, isEmail: true },
+    ];
+
   return (
     <section
       id="about"
@@ -34,32 +43,27 @@ export const About: React.FC = () => {
               ))}
             </div>
 
+            {/* Dynamic Info Card */}
             <div className="lg:col-span-5 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 sm:p-6 bg-white/70 dark:bg-zinc-900/40 backdrop-blur-md shadow-sm">
               <dl className="space-y-3 text-xs sm:text-sm divide-y divide-zinc-200 dark:divide-zinc-800">
-                <div className="pt-2 first:pt-0 flex justify-between items-baseline">
-                  <dt className="text-zinc-500 text-xs font-mono uppercase">Location</dt>
-                  <dd className="font-mono text-zinc-800 dark:text-zinc-200">{personalInfo.location}</dd>
-                </div>
-                <div className="pt-2 flex justify-between items-baseline">
-                  <dt className="text-zinc-500 text-xs font-mono uppercase">Education</dt>
-                  <dd className="text-zinc-800 dark:text-zinc-200">B.Sc. in CSE (DIU)</dd>
-                </div>
-                <div className="pt-2 flex justify-between items-baseline">
-                  <dt className="text-zinc-500 text-xs font-mono uppercase">Focus</dt>
-                  <dd className="text-zinc-800 dark:text-zinc-200">Design Systems &amp; FinTech UI</dd>
-                </div>
-                <div className="pt-2 flex justify-between items-baseline">
-                  <dt className="text-zinc-500 text-xs font-mono uppercase">Direct Email</dt>
-                  <dd>
-                    <a
-                      href={`mailto:${personalInfo.email}`}
-                      className="font-mono text-yellow-600 dark:text-yellow-400 hover:underline flex items-center gap-1 text-xs truncate max-w-[200px] sm:max-w-none"
-                    >
-                      <span className="truncate">{personalInfo.email}</span>
-                      <ArrowUpRight size={13} className="shrink-0" />
-                    </a>
-                  </dd>
-                </div>
+                {infoItems.map((item, idx) => (
+                  <div key={idx} className="pt-2 first:pt-0 flex justify-between items-baseline gap-4">
+                    <dt className="text-zinc-500 text-xs font-mono uppercase shrink-0">{item.label}</dt>
+                    <dd className="text-right">
+                      {item.isEmail ? (
+                        <a
+                          href={`mailto:${item.value}`}
+                          className="font-mono text-yellow-600 dark:text-yellow-400 hover:underline flex items-center gap-1 text-xs justify-end"
+                        >
+                          <span className="truncate max-w-[180px] sm:max-w-none">{item.value}</span>
+                          <ArrowUpRight size={13} className="shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="font-mono text-zinc-800 dark:text-zinc-200">{item.value}</span>
+                      )}
+                    </dd>
+                  </div>
+                ))}
               </dl>
             </div>
           </div>

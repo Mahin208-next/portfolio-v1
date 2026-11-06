@@ -8,6 +8,12 @@ export const PERSONAL_INFO = {
   heroHeadlineAccent: 'technologist',
   heroHeadlineLine2: '& Senior Frontend Engineer',
   aboutHeading: 'This is Mossadik Hasan',
+  aboutInfoItems: [
+    { label: 'Location', value: 'Dhaka, Bangladesh · Available Worldwide', isEmail: false },
+    { label: 'Education', value: 'B.Sc. in CSE (DIU)', isEmail: false },
+    { label: 'Focus', value: 'Software Development & IoT', isEmail: false },
+    { label: 'Direct Email', value: 'hasan241-15-127@diu.edu.bd', isEmail: true },
+  ],
   tagline: 'Sculpting high-performance web systems with Swiss typographic discipline and kinetic precision.',
   email: 'hasan241-15-127@diu.edu.bd',
   location: 'Dhaka, Bangladesh · Available Worldwide',
