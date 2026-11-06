@@ -82,7 +82,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
-  const [showPw, setShowPw] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -590,9 +592,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </SectionCard>
 
-              <SectionCard title="Core Engineering Pillars" description="The 3 philosophy cards in the About section.">
+              <SectionCard title="Core Engineering Pillars" description="The philosophy cards in the About section.">
                 {data.pillars.map((pillar, i) => (
                   <div key={i} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-3 mb-3">
+                    {/* Card header with pillar number and delete button */}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-mono font-bold text-yellow-500">Pillar #{i + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => updatePillars(data.pillars.filter((_, j) => j !== i))}
+                        className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
+                        title="Delete pillar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                     <div className="grid grid-cols-5 gap-3">
                       <Field label="Number" className="col-span-1">
                         <input
@@ -633,6 +647,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </Field>
                   </div>
                 ))}
+                {/* Add Pillar Button */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    updatePillars([
+                      ...data.pillars,
+                      {
+                        index: String(data.pillars.length + 1).padStart(2, '0'),
+                        title: 'New Pillar',
+                        description: 'Describe this engineering philosophy...',
+                      },
+                    ])
+                  }
+                  className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-1"
+                >
+                  <Plus size={14} /> Add Pillar
+                </button>
               </SectionCard>
             </div>
           )}
@@ -1158,7 +1189,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <Field label="Current Password">
                     <div className="relative">
                       <input
-                        type={showPw ? 'text' : 'password'}
+                        type={showCurrentPw ? 'text' : 'password'}
                         className={inputCls + ' pr-10'}
                         value={pwCurrent}
                         onChange={(e) => setPwCurrent(e.target.value)}
@@ -1167,34 +1198,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPw(!showPw)}
+                        onClick={() => setShowCurrentPw(!showCurrentPw)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
                       >
-                        {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {showCurrentPw ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
                   </Field>
 
                   <Field label="New Password (minimum 8 characters)">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      className={inputCls}
-                      value={pwNew}
-                      onChange={(e) => setPwNew(e.target.value)}
-                      placeholder="New strong password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewPw ? 'text' : 'password'}
+                        className={inputCls + ' pr-10'}
+                        value={pwNew}
+                        onChange={(e) => setPwNew(e.target.value)}
+                        placeholder="New strong password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPw(!showNewPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      >
+                        {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </Field>
 
                   <Field label="Confirm New Password">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      className={inputCls}
-                      value={pwConfirm}
-                      onChange={(e) => setPwConfirm(e.target.value)}
-                      placeholder="Repeat new password"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPw ? 'text' : 'password'}
+                        className={inputCls + ' pr-10'}
+                        value={pwConfirm}
+                        onChange={(e) => setPwConfirm(e.target.value)}
+                        placeholder="Repeat new password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPw(!showConfirmPw)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                      >
+                        {showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
                   </Field>
 
                   {pwError && (

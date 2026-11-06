@@ -111,6 +111,18 @@ export const supabase = {
       },
       async upsert(record: any) {
         const store = readLocalStore();
+        if (tableName === 'admin_credentials') {
+          store.admin_credentials = store.admin_credentials || [];
+          const id = record.id || 'admin';
+          const idx = store.admin_credentials.findIndex((x) => x.id === id);
+          if (idx !== -1) {
+            store.admin_credentials[idx] = { ...store.admin_credentials[idx], ...record };
+          } else {
+            store.admin_credentials.push(record);
+          }
+          writeLocalStore(store);
+          return { data: record, error: null };
+        }
         if (tableName === 'portfolio_config') {
           store.portfolio_config = { ...store.portfolio_config, ...record };
           writeLocalStore(store);

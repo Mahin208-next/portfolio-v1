@@ -66,3 +66,4 @@ export function getSocialHref(social: { name: string; url?: string }): string {
 
   return `https://${url}`;
 }
+
