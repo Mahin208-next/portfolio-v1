@@ -231,7 +231,7 @@ export const EDUCATION_DATA: EducationItem[] = [
     institution: 'Dhaka International University (DIU)',
     period: '2016 — 2020',
     location: 'Dhaka, Bangladesh',
-    honors: 'Graduated with First Class Honors · Dean’s Academic Excellence Award',
+    honors: '',
     description: 'Rigorous 4-year curriculum covering data structures, algorithm design, software engineering methodologies, distributed systems, and computer human interaction.',
     coursework: [
       'Advanced Data Structures & Algorithms',
