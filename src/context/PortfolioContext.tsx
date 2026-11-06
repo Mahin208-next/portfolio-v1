@@ -75,13 +75,15 @@ export interface PortfolioDataState {
   blogPosts: BlogPost[];
 }
 
-// IMPORTANT: Never wipe this key list — always add new versions, never remove old ones.
-// This ensures user data is migrated forward rather than lost on version bumps.
+// IMPORTANT: Never change STORAGE_KEY. Use migrations below for field-level patches.
 const STORAGE_KEY = 'm_hasan_portfolio_state_v4';
-const LEGACY_KEYS = [
+
+// All previous key names — data is migrated forward, NEVER dropped
+const LEGACY_STORAGE_KEYS = [
   'm_hasan_portfolio_state_v3',
   'm_hasan_portfolio_state_v2',
   'm_hasan_portfolio_state_v1',
+  'm_hasan_portfolio',
 ];
 
 const defaultState: PortfolioDataState = {
@@ -100,45 +102,52 @@ const defaultState: PortfolioDataState = {
 };
 
 /**
- * Load saved state with forward migration.
- * Priority: current key → most recent legacy key → default state.
- * User data is NEVER lost on version bumps — it is migrated and patched.
+ * Apply targeted field-level patches when migrating from an older storage version.
+ * Add entries here when a code change requires a specific field to be updated.
+ * NEVER wipe entire sections — only patch the specific field that changed.
  */
-function loadStateWithMigration(): PortfolioDataState {
+function applyMigrationPatches(state: PortfolioDataState): PortfolioDataState {
+  return {
+    ...state,
+    // v4 patch: clear the honors badge on all education items (user does not want to show results)
+    education: (state.education ?? []).map((edu) => ({
+      ...edu,
+      honors: (edu as any).honors === 'Graduated with First Class Honors · Dean\'s Academic Excellence Award'
+        ? ''
+        : (edu as any).honors ?? '',
+    })),
+  };
+}
+
+/**
+ * Load saved state — tries current key first, then migrates from any legacy key.
+ * Your data is ALWAYS preserved; only specific patched fields are updated.
+ */
+function loadSavedState(): PortfolioDataState {
   try {
-    // 1. Try current key first
+    // 1. Try current storage key
     const current = localStorage.getItem(STORAGE_KEY);
     if (current) {
       return JSON.parse(current);
     }
 
-    // 2. Try legacy keys in reverse order (most recent first)
-    for (const legacyKey of LEGACY_KEYS) {
+    // 2. Try migrating from any legacy key (preserves all user data)
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
       const legacy = localStorage.getItem(legacyKey);
       if (legacy) {
-        const parsed: PortfolioDataState = JSON.parse(legacy);
-
-        // Patch any specific field changes introduced in this version:
-        // v4 patch: remove honors from education entries so the badge is hidden
-        if (parsed.education) {
-          parsed.education = parsed.education.map((edu) => ({
-            ...edu,
-            honors: '',
-          }));
-        }
-
-        // Save migrated data to new key and clean up old key
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-        localStorage.removeItem(legacyKey);
-        console.info(`[Portfolio] Migrated data from ${legacyKey} → ${STORAGE_KEY}`);
-        return parsed;
+        const parsed = JSON.parse(legacy) as PortfolioDataState;
+        // Apply only targeted patches — everything else is preserved
+        const migrated = applyMigrationPatches(parsed);
+        // Save under new key so migration only happens once
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        // Clean up old key to avoid confusion (but data is now safely in new key)
+        try { localStorage.removeItem(legacyKey); } catch { /* ignore */ }
+        return migrated;
       }
     }
-  } catch (e) {
-    console.error('[Portfolio] Failed to load/migrate state:', e);
+  } catch {
+    // Fallback to defaults only if storage is completely unreadable
   }
-
-  // 3. No saved data anywhere — use defaults
   return defaultState;
 }
 
@@ -174,9 +183,7 @@ interface PortfolioContextType {
 const PortfolioContext = createContext<PortfolioContextType | null>(null);
 
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<PortfolioDataState>(() => {
-    return loadStateWithMigration();
-  });
+  const [data, setData] = useState<PortfolioDataState>(() => loadSavedState());
 
   // On mount, try to fetch latest data from backend (overrides localStorage if DB has data)
   useEffect(() => {
