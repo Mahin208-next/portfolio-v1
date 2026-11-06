@@ -30,3 +30,4 @@ ALTER TABLE portfolio_config DISABLE ROW LEVEL SECURITY;
 
 -- 4. Confirm setup
 SELECT 'Tables created successfully!' AS status;
+

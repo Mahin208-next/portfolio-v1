@@ -14,7 +14,7 @@ import {
   CERTIFICATIONS as defaultCertifications,
   BLOG_POSTS as defaultBlogPosts,
 } from '../data/portfolioData';
-import { fetchPortfolioData } from '../hooks/useApi';
+import { fetchPortfolioData, savePortfolioData } from '../hooks/useApi';
 
 export interface TechSkillItem {
   id: string;
@@ -185,10 +185,20 @@ const PortfolioContext = createContext<PortfolioContextType | null>(null);
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [data, setData] = useState<PortfolioDataState>(() => loadSavedState());
 
-  // On mount, try to fetch latest data from backend (overrides localStorage if DB has data)
+  // On mount, sync with Supabase DB
   useEffect(() => {
     fetchPortfolioData().then((dbData) => {
-      if (!dbData) return; // No backend data yet — keep localStorage
+      if (!dbData) {
+        // DB is empty (first time with Supabase connected) — push current localStorage data up
+        // This runs only once; after this, all saves go directly to Supabase
+        const currentState = loadSavedState();
+        savePortfolioData(currentState).then((result) => {
+          if (result.success) {
+            console.log('[Portfolio] Initial data synced to Supabase successfully');
+          }
+        });
+        return;
+      }
       try {
         const merged: PortfolioDataState = {
           personalInfo: (dbData.personal_info as typeof defaultPersonalInfo) ?? data.personalInfo,
