@@ -75,7 +75,14 @@ export interface PortfolioDataState {
   blogPosts: BlogPost[];
 }
 
+// IMPORTANT: Never wipe this key list — always add new versions, never remove old ones.
+// This ensures user data is migrated forward rather than lost on version bumps.
 const STORAGE_KEY = 'm_hasan_portfolio_state_v4';
+const LEGACY_KEYS = [
+  'm_hasan_portfolio_state_v3',
+  'm_hasan_portfolio_state_v2',
+  'm_hasan_portfolio_state_v1',
+];
 
 const defaultState: PortfolioDataState = {
   personalInfo: defaultPersonalInfo,
@@ -91,6 +98,49 @@ const defaultState: PortfolioDataState = {
   certifications: defaultCertifications,
   blogPosts: defaultBlogPosts,
 };
+
+/**
+ * Load saved state with forward migration.
+ * Priority: current key → most recent legacy key → default state.
+ * User data is NEVER lost on version bumps — it is migrated and patched.
+ */
+function loadStateWithMigration(): PortfolioDataState {
+  try {
+    // 1. Try current key first
+    const current = localStorage.getItem(STORAGE_KEY);
+    if (current) {
+      return JSON.parse(current);
+    }
+
+    // 2. Try legacy keys in reverse order (most recent first)
+    for (const legacyKey of LEGACY_KEYS) {
+      const legacy = localStorage.getItem(legacyKey);
+      if (legacy) {
+        const parsed: PortfolioDataState = JSON.parse(legacy);
+
+        // Patch any specific field changes introduced in this version:
+        // v4 patch: remove honors from education entries so the badge is hidden
+        if (parsed.education) {
+          parsed.education = parsed.education.map((edu) => ({
+            ...edu,
+            honors: '',
+          }));
+        }
+
+        // Save migrated data to new key and clean up old key
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        localStorage.removeItem(legacyKey);
+        console.info(`[Portfolio] Migrated data from ${legacyKey} → ${STORAGE_KEY}`);
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('[Portfolio] Failed to load/migrate state:', e);
+  }
+
+  // 3. No saved data anywhere — use defaults
+  return defaultState;
+}
 
 interface PortfolioContextType {
   data: PortfolioDataState;
@@ -125,15 +175,7 @@ const PortfolioContext = createContext<PortfolioContextType | null>(null);
 
 export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [data, setData] = useState<PortfolioDataState>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // Fallback
-    }
-    return defaultState;
+    return loadStateWithMigration();
   });
 
   // On mount, try to fetch latest data from backend (overrides localStorage if DB has data)
