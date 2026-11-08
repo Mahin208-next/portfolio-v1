@@ -42,6 +42,13 @@ export const PERSONAL_INFO = {
     copyrightText: '',
     customSections: [] as { id: string; title: string; content: string; url?: string }[],
   },
+  projectCategories: [
+    'All',
+    'Fintech',
+    'Creative & Audio',
+    'Publishing & Tools',
+    'Design Systems',
+  ],
   socials: [
     { name: 'GitHub', url: 'https://github.com' },
     { name: 'LinkedIn', url: 'https://linkedin.com' },

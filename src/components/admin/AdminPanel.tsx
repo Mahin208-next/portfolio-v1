@@ -872,8 +872,133 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           {/* ════ 7. PROJECTS SECTION ════ */}
           {activeSection === 'projects' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-6">
+              {/* Category Filter Tabs Manager */}
+              <SectionCard
+                title="Project Categories & Filter Tabs"
+                description="Manage the category tabs displayed above your Selected Works gallery (e.g. All, Fintech, Creative & Audio, Publishing & Tools, Design Systems). Visitors can click these tabs to filter your projects."
+              >
+                {(() => {
+                  const rawCategories = (data.personalInfo as any)?.projectCategories;
+                  const categories: string[] =
+                    Array.isArray(rawCategories) && rawCategories.length > 0
+                      ? rawCategories.filter((c: any) => typeof c === 'string' && c.trim() !== '')
+                      : ['All', 'Fintech', 'Creative & Audio', 'Publishing & Tools', 'Design Systems'];
+
+                  const updateCategories = (newCategories: string[]) => {
+                    updatePersonalInfo({
+                      projectCategories: newCategories,
+                    } as any);
+                  };
+
+                  return (
+                    <div className="space-y-4">
+                      {/* List of categories */}
+                      <div className="space-y-2">
+                        {categories.map((cat, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                          >
+                            <span className="w-6 text-center font-mono text-xs text-zinc-400 font-bold">
+                              #{i + 1}
+                            </span>
+
+                            {/* Move buttons */}
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                disabled={i === 0}
+                                onClick={() => updateCategories(reorder(categories, i, 'up'))}
+                                className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+                                title="Move up"
+                              >
+                                <ArrowUp size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={i === categories.length - 1}
+                                onClick={() => updateCategories(reorder(categories, i, 'down'))}
+                                className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-20"
+                                title="Move down"
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+                            </div>
+
+                            {/* Category Name Input */}
+                            <input
+                              type="text"
+                              value={cat}
+                              onChange={(e) => {
+                                const copy = [...categories];
+                                copy[i] = e.target.value;
+                                updateCategories(copy);
+                              }}
+                              className={inputCls + ' flex-1 font-mono text-xs'}
+                              placeholder="Category name"
+                            />
+
+                            {/* Count of projects using this category */}
+                            <span className="text-[11px] font-mono px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 whitespace-nowrap">
+                              {cat.toLowerCase() === 'all'
+                                ? `${data.projects.length} total`
+                                : `${data.projects.filter((p) => (p.category || '').toLowerCase() === cat.toLowerCase()).length} projects`}
+                            </span>
+
+                            {/* Delete button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateCategories(categories.filter((_, idx) => idx !== i));
+                              }}
+                              className="p-1.5 text-zinc-400 hover:text-red-500 rounded-md transition-colors"
+                              title="Delete category"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add Category row */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateCategories([...categories, 'New Category']);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-yellow-400 hover:bg-yellow-300 text-zinc-950 rounded-lg transition-colors"
+                        >
+                          <Plus size={14} /> Add Category
+                        </button>
+                      </div>
+
+                      {/* Live Tab Bar Preview */}
+                      <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                        <p className="text-[11px] font-mono uppercase text-zinc-400 mb-2">Live Tabs Preview:</p>
+                        <div className="flex items-center gap-1.5 overflow-x-auto p-2.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          {categories.map((c, idx) => (
+                            <span
+                              key={idx}
+                              className={`px-3 py-1 text-xs font-mono rounded-md ${
+                                idx === 0
+                                  ? 'bg-yellow-400 text-zinc-950 font-bold'
+                                  : 'text-zinc-400 bg-zinc-900 border border-zinc-800'
+                              }`}
+                            >
+                              {c || 'Untitled'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </SectionCard>
+
+              {/* Projects List Header */}
+              <div className="flex items-center justify-between pt-2">
                 <div>
                   <h2 className="text-lg font-bold">Projects ({data.projects.length})</h2>
                   <p className="text-xs text-zinc-500">Case studies, architecture solutions, metrics, and live links.</p>
@@ -882,7 +1007,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   type="button"
                   onClick={() => addProject({
                     id: 'proj-' + Date.now(), title: 'New Project Title', subtitle: 'Project subtitle or mission',
-                    category: 'Fintech', year: '2025', role: 'Frontend Architect', image: '',
+                    category: ((data.personalInfo as any)?.projectCategories?.[1]) || 'Fintech',
+                    year: '2025', role: 'Frontend Architect', image: '',
                     summary: 'Overview of the project and architectural challenges.',
                     challenge: 'Specific engineering or user experience hurdles.',
                     solution: 'Design systems and architectural implementation.',
@@ -896,18 +1022,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
               </div>
 
-              {data.projects.map((proj, index) => (
-                <ProjectCard
-                  key={proj.id}
-                  proj={proj}
-                  index={index}
-                  total={data.projects.length}
-                  onMove={(dir) => saveData({ ...data, projects: reorder(data.projects, index, dir) })}
-                  onUpdate={(u) => updateProject(proj.id, u)}
-                  onDelete={() => deleteProject(proj.id)}
-                  onFileUpload={handleFileUpload}
-                />
-              ))}
+              {data.projects.map((proj, index) => {
+                const rawCats = (data.personalInfo as any)?.projectCategories;
+                const projectCategories: string[] =
+                  Array.isArray(rawCats) && rawCats.length > 0
+                    ? rawCats.filter((c: any) => typeof c === 'string' && c.trim() !== '')
+                    : ['All', 'Fintech', 'Creative & Audio', 'Publishing & Tools', 'Design Systems'];
+
+                return (
+                  <ProjectCard
+                    key={proj.id}
+                    proj={proj}
+                    index={index}
+                    total={data.projects.length}
+                    categories={projectCategories}
+                    onMove={(dir) => saveData({ ...data, projects: reorder(data.projects, index, dir) })}
+                    onUpdate={(u) => updateProject(proj.id, u)}
+                    onDelete={() => deleteProject(proj.id)}
+                    onFileUpload={handleFileUpload}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -1863,11 +1998,12 @@ function ExperienceCard({
 }
 
 function ProjectCard({
-  proj, index, total, onMove, onUpdate, onDelete, onFileUpload
+  proj, index, total, categories, onMove, onUpdate, onDelete, onFileUpload
 }: {
   proj: Project;
   index: number;
   total: number;
+  categories?: string[];
   onMove: (dir: 'up' | 'down') => void;
   onUpdate: (u: Partial<Project>) => void;
   onDelete: () => void;
@@ -1927,7 +2063,36 @@ function ProjectCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Project Title"><input type="text" className={inputCls} value={proj.title} onChange={(e) => onUpdate({ title: e.target.value })} /></Field>
             <Field label="Subtitle / Tagline"><input type="text" className={inputCls} value={proj.subtitle} onChange={(e) => onUpdate({ subtitle: e.target.value })} /></Field>
-            <Field label="Category"><input type="text" className={inputCls} value={proj.category} onChange={(e) => onUpdate({ category: e.target.value })} /></Field>
+            <Field label="Category">
+              <input
+                type="text"
+                className={inputCls}
+                value={proj.category}
+                onChange={(e) => onUpdate({ category: e.target.value })}
+                placeholder="e.g. Fintech"
+              />
+              {categories && categories.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-zinc-400 font-mono">Quick Pick:</span>
+                  {categories
+                    .filter((c) => c.toLowerCase() !== 'all')
+                    .map((catName) => (
+                      <button
+                        key={catName}
+                        type="button"
+                        onClick={() => onUpdate({ category: catName })}
+                        className={`px-2 py-0.5 text-[10px] font-mono rounded border transition-colors ${
+                          proj.category?.toLowerCase() === catName.toLowerCase()
+                            ? 'bg-yellow-400 text-zinc-950 border-yellow-400 font-bold'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:border-yellow-400 text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {catName}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </Field>
             <Field label="Year"><input type="text" className={inputCls} value={proj.year} onChange={(e) => onUpdate({ year: e.target.value })} /></Field>
             <Field label="Role Title"><input type="text" className={inputCls} value={proj.role} onChange={(e) => onUpdate({ role: e.target.value })} /></Field>
             <Field label="Live Demo URL"><input type="text" className={inputCls + ' font-mono text-xs'} value={proj.liveUrl || ''} onChange={(e) => onUpdate({ liveUrl: e.target.value })} placeholder="https://..." /></Field>

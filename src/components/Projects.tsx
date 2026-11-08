@@ -10,12 +10,23 @@ export const Projects: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const categories = ['All', 'Fintech', 'Creative & Audio', 'Publishing & Tools', 'Design Systems'];
+  const rawCategories = (data?.personalInfo as any)?.projectCategories;
+  const categories: string[] =
+    Array.isArray(rawCategories) && rawCategories.length > 0
+      ? rawCategories.filter((c: any) => typeof c === 'string' && c.trim() !== '')
+      : ['All', 'Fintech', 'Creative & Audio', 'Publishing & Tools', 'Design Systems'];
 
-  const filteredProjects =
-    selectedCategory === 'All'
-      ? data.projects
-      : data.projects.filter((p) => p.category === selectedCategory);
+  const isAll = (cat: string) => cat.toLowerCase() === 'all' || cat.toLowerCase() === 'view all';
+
+  const currentCategory = categories.includes(selectedCategory)
+    ? selectedCategory
+    : (categories[0] || 'All');
+
+  const filteredProjects = isAll(currentCategory)
+    ? (data?.projects || [])
+    : (data?.projects || []).filter(
+        (p) => (p.category || '').trim().toLowerCase() === currentCategory.trim().toLowerCase()
+      );
 
   return (
     <section
@@ -45,7 +56,7 @@ export const Projects: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-3.5 py-1.5 text-xs font-mono rounded-md transition-all duration-200 whitespace-nowrap shrink-0 ${
-                    selectedCategory === cat
+                    currentCategory === cat
                       ? 'bg-yellow-400 text-zinc-950 font-bold shadow-sm'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-900'
                   }`}
@@ -57,8 +68,9 @@ export const Projects: React.FC = () => {
           </div>
 
           {/* Projects Bento Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {filteredProjects.map((project, index) => {
+          {filteredProjects.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {filteredProjects.map((project, index) => {
               const isFeatured = index === 0;
               return (
                 <div
@@ -149,6 +161,17 @@ export const Projects: React.FC = () => {
               );
             })}
           </div>
+        ) : (
+          <div className="py-16 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50/50 dark:bg-zinc-900/20">
+            <Layers size={28} className="mx-auto text-zinc-400 mb-3" />
+            <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              No projects found in &ldquo;{currentCategory}&rdquo;
+            </p>
+            <p className="text-xs text-zinc-400 mt-1 font-mono">
+              Assign projects to this category in the Admin Panel to display them here.
+            </p>
+          </div>
+        )}
         </SectionReveal>
       </div>
 
