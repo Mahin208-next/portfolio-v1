@@ -31,6 +31,17 @@ export const PERSONAL_INFO = {
     { label: 'Lighthouse Performance', value: '99.8%' },
     { label: 'Lines of Code Refactored', value: '450k+' },
   ],
+  footer: {
+    brandText: 'Mosaddik Hasan Mahin',
+    subtitleText: 'Creative Technologist & Senior Frontend Engineer',
+    showBrand: true,
+    middleText: 'Dhaka, Bangladesh · Asia/Dhaka',
+    showMiddle: true,
+    returnToTopText: 'Return to Top',
+    showReturnToTop: true,
+    copyrightText: '',
+    customSections: [] as { id: string; title: string; content: string; url?: string }[],
+  },
   socials: [
     { name: 'GitHub', url: 'https://github.com' },
     { name: 'LinkedIn', url: 'https://linkedin.com' },

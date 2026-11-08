@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Upload, ChevronDown, ChevronUp, Eye, EyeOff,
   Check, AlertCircle, Loader2, LogOut, Image as ImageIcon,
   ArrowUp, ArrowDown, Share2, FileCheck, Palette, ExternalLink,
-  Sliders, ShieldCheck, Sun, Moon
+  Sliders, ShieldCheck, Sun, Moon, PanelBottom
 } from 'lucide-react';
 import { usePortfolio, TechSkillItem, PillarItem } from '../../context/PortfolioContext';
 import { AVAILABLE_ICON_NAMES, renderSkillIcon } from '../../utils/skillIcons';
@@ -33,6 +33,7 @@ export type SidebarSection =
   | 'contact'
   | 'socials'
   | 'resume'
+  | 'footer'
   | 'theme'
   | 'settings';
 
@@ -49,6 +50,7 @@ const SIDEBAR_ITEMS: { id: SidebarSection; label: string; icon: React.ElementTyp
   { id: 'contact',     label: 'Contact Info',      icon: Mail,           group: 'Content' },
   { id: 'socials',     label: 'Social Media',      icon: Share2,         group: 'Content' },
   { id: 'resume',      label: 'Resume / CV',       icon: FileCheck,      group: 'Content' },
+  { id: 'footer',      label: 'Bottom Bar / Footer', icon: PanelBottom,  group: 'Content' },
   { id: 'theme',       label: 'Theme & Style',     icon: Palette,        group: 'Admin' },
   { id: 'settings',    label: 'General & Password',icon: Settings,       group: 'Admin' },
 ];
@@ -1264,7 +1266,339 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           )}
 
-          {/* ════ 13. THEME & APPEARANCE ════ */}
+          {/* ════ 13. BOTTOM BAR / FOOTER ════ */}
+          {activeSection === 'footer' && (
+            <div className="space-y-6">
+              {/* Brand & Left Subtitle */}
+              <SectionCard
+                title="Brand & Subtitle (Left Side)"
+                description="The brand name and title/role displayed on the bottom bar's left side."
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Show Brand on Bottom Bar</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={((data.personalInfo as any)?.footer?.showBrand !== false)}
+                        onChange={(e) => {
+                          const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                          updatePersonalInfo({
+                            footer: { ...currentFooter, showBrand: e.target.checked },
+                          } as any);
+                        }}
+                        className="w-4 h-4 accent-yellow-400"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Brand / Display Name">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={(data.personalInfo as any)?.footer?.brandText ?? (data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan')}
+                        onChange={(e) => {
+                          const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                          updatePersonalInfo({
+                            footer: { ...currentFooter, brandText: e.target.value },
+                          } as any);
+                        }}
+                        placeholder="e.g. Mosaddik Hasan Mahin"
+                      />
+                    </Field>
+
+                    <Field label="Subtitle / Role Text">
+                      <input
+                        type="text"
+                        className={inputCls}
+                        value={(data.personalInfo as any)?.footer?.subtitleText ?? (data.personalInfo.title || '')}
+                        onChange={(e) => {
+                          const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                          updatePersonalInfo({
+                            footer: { ...currentFooter, subtitleText: e.target.value },
+                          } as any);
+                        }}
+                        placeholder="e.g. Creative Technologist & Senior Frontend Engineer"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Middle Section (Location & Timezone) */}
+              <SectionCard
+                title="Middle Info Block"
+                description="Displays location and timezone or any custom text in the center of the bottom bar."
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Show Middle Info</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={((data.personalInfo as any)?.footer?.showMiddle !== false)}
+                        onChange={(e) => {
+                          const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                          updatePersonalInfo({
+                            footer: { ...currentFooter, showMiddle: e.target.checked },
+                          } as any);
+                        }}
+                        className="w-4 h-4 accent-yellow-400"
+                      />
+                    </label>
+                  </div>
+
+                  <Field label="Center / Location Text">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={
+                        (data.personalInfo as any)?.footer?.middleText ??
+                        `${(data.personalInfo.location || '').split('·')[0].trim()} · ${data.personalInfo.timezone || 'Asia/Dhaka'}`
+                      }
+                      onChange={(e) => {
+                        const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                        updatePersonalInfo({
+                          footer: { ...currentFooter, middleText: e.target.value },
+                        } as any);
+                      }}
+                      placeholder="e.g. Dhaka, Bangladesh · Asia/Dhaka"
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
+
+              {/* Return to Top Button */}
+              <SectionCard
+                title="Return to Top Action (Right Side)"
+                description="Customize or toggle the smooth scroll-to-top button on the right."
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Show Return to Top Button</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={((data.personalInfo as any)?.footer?.showReturnToTop !== false)}
+                        onChange={(e) => {
+                          const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                          updatePersonalInfo({
+                            footer: { ...currentFooter, showReturnToTop: e.target.checked },
+                          } as any);
+                        }}
+                        className="w-4 h-4 accent-yellow-400"
+                      />
+                    </label>
+                  </div>
+
+                  <Field label="Button Text">
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={(data.personalInfo as any)?.footer?.returnToTopText ?? 'Return to Top'}
+                      onChange={(e) => {
+                        const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                        updatePersonalInfo({
+                          footer: { ...currentFooter, returnToTopText: e.target.value },
+                        } as any);
+                      }}
+                      placeholder="e.g. Return to Top"
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
+
+              {/* Custom Sections / Items */}
+              <SectionCard
+                title="Custom Bottom Sections & Links"
+                description="Add additional sections, colophon items, status notes, or links to the bottom bar."
+              >
+                {(() => {
+                  const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                  const rawSections = currentFooter.customSections;
+                  const sections: { id: string; title: string; content: string; url?: string }[] =
+                    Array.isArray(rawSections) ? rawSections : [];
+
+                  const updateSections = (next: { id: string; title: string; content: string; url?: string }[]) => {
+                    updatePersonalInfo({
+                      footer: {
+                        ...currentFooter,
+                        customSections: next,
+                      },
+                    } as any);
+                  };
+
+                  return (
+                    <div className="space-y-3">
+                      {sections.map((sec, i) => (
+                        <div key={sec.id || i} className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono font-bold text-yellow-500">Section #{i + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateSections(sections.filter((_, idx) => idx !== i));
+                              }}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
+                              title="Delete section"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Field label="Section Label / Title (Optional)">
+                              <input
+                                type="text"
+                                className={inputCls}
+                                value={sec.title || ''}
+                                placeholder="e.g. Status, Built with, License"
+                                onChange={(e) => {
+                                  const updated = [...sections];
+                                  updated[i] = { ...updated[i], title: e.target.value };
+                                  updateSections(updated);
+                                }}
+                              />
+                            </Field>
+
+                            <Field label="Content / Text">
+                              <input
+                                type="text"
+                                className={inputCls}
+                                value={sec.content || ''}
+                                placeholder="e.g. Available for Q1 2026 contracts"
+                                onChange={(e) => {
+                                  const updated = [...sections];
+                                  updated[i] = { ...updated[i], content: e.target.value };
+                                  updateSections(updated);
+                                }}
+                              />
+                            </Field>
+                          </div>
+
+                          <Field label="Optional Link URL (Clickable)">
+                            <input
+                              type="text"
+                              className={inputCls + ' font-mono text-xs'}
+                              value={sec.url || ''}
+                              placeholder="e.g. https://github.com/Mahin208-next or leave empty"
+                              onChange={(e) => {
+                                const updated = [...sections];
+                                updated[i] = { ...updated[i], url: e.target.value };
+                                updateSections(updated);
+                              }}
+                            />
+                          </Field>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateSections([
+                            ...sections,
+                            {
+                              id: 'sec-' + Date.now(),
+                              title: 'Status',
+                              content: 'Available Worldwide',
+                              url: '',
+                            },
+                          ]);
+                        }}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-yellow-500 hover:text-yellow-400 mt-2"
+                      >
+                        <Plus size={14} /> Add Section
+                      </button>
+                    </div>
+                  );
+                })()}
+              </SectionCard>
+
+              {/* Optional Copyright Text */}
+              <SectionCard
+                title="Copyright & Colophon Note"
+                description="Optional copyright notice or additional note at the bottom of the footer."
+              >
+                <Field label="Copyright Notice">
+                  <input
+                    type="text"
+                    className={inputCls}
+                    value={(data.personalInfo as any)?.footer?.copyrightText ?? ''}
+                    onChange={(e) => {
+                      const currentFooter = (data.personalInfo as any)?.footer ?? {};
+                      updatePersonalInfo({
+                        footer: { ...currentFooter, copyrightText: e.target.value },
+                      } as any);
+                    }}
+                    placeholder="e.g. © 2026 Mosaddik Hasan. All rights reserved."
+                  />
+                </Field>
+              </SectionCard>
+
+              {/* Live Preview */}
+              <SectionCard title="Live Bottom Bar Preview" description="Real-time preview of how the bottom bar looks on the public site.">
+                <div className="p-6 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-400 space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono">
+                    {((data.personalInfo as any)?.footer?.showBrand !== false) && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">
+                          <span className="text-yellow-400">
+                            {(((data.personalInfo as any)?.footer?.brandText || data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan')).charAt(0)}
+                          </span>
+                          <span>
+                            {(((data.personalInfo as any)?.footer?.brandText || data.personalInfo.logoText || data.personalInfo.name || 'M. Hasan')).slice(1)}
+                          </span>
+                        </span>
+                        {((data.personalInfo as any)?.footer?.subtitleText ?? data.personalInfo.title) && (
+                          <>
+                            <span className="text-zinc-600">·</span>
+                            <span className="text-zinc-400 text-[11px]">
+                              {(data.personalInfo as any)?.footer?.subtitleText ?? data.personalInfo.title}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {((data.personalInfo as any)?.footer?.showMiddle !== false) && (
+                      <div className="text-zinc-500 text-[11px]">
+                        {(data.personalInfo as any)?.footer?.middleText ??
+                          `${(data.personalInfo.location || '').split('·')[0].trim()} · ${data.personalInfo.timezone || 'Asia/Dhaka'}`}
+                      </div>
+                    )}
+
+                    {((data.personalInfo as any)?.footer?.showReturnToTop !== false) && (
+                      <div className="text-zinc-400 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                        <span>{(data.personalInfo as any)?.footer?.returnToTopText || 'Return to Top'}</span>
+                        <ArrowUp size={12} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview of custom sections / copyright */}
+                  {(Array.isArray((data.personalInfo as any)?.footer?.customSections) &&
+                    (data.personalInfo as any)?.footer?.customSections.length > 0 ||
+                    (data.personalInfo as any)?.footer?.copyrightText) && (
+                    <div className="pt-4 border-t border-zinc-800/60 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-zinc-500">
+                      <div className="flex flex-wrap items-center gap-4">
+                        {(data.personalInfo as any)?.footer?.customSections?.map((s: any, idx: number) => (
+                          <span key={idx} className="text-zinc-400">
+                            {s.title ? `${s.title}: ` : ''}{s.content}
+                          </span>
+                        ))}
+                      </div>
+                      {(data.personalInfo as any)?.footer?.copyrightText && (
+                        <div>{(data.personalInfo as any)?.footer?.copyrightText}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* ════ 14. THEME & APPEARANCE ════ */}
           {activeSection === 'theme' && (
             <div className="space-y-6">
               <SectionCard title="Visual Theme & Accent System" description="Control light/dark modes and accent styling.">
